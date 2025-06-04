@@ -14,9 +14,12 @@
 		2A7CB29C2DEFCCC700658642 /* FocusAITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A7CB29B2DEFCCC700658642 /* FocusAITests.swift */; };
 		2A7CB2A62DEFCCC700658642 /* FocusAIUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A7CB2A52DEFCCC700658642 /* FocusAIUITests.swift */; };
 		2A7CB2A82DEFCCC700658642 /* FocusAIUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A7CB2A72DEFCCC700658642 /* FocusAIUITestsLaunchTests.swift */; };
+<<<<<<< HEAD
 		2A7CB2B52DEFD23F00658642 /* PDFInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A7CB2B42DEFD23F00658642 /* PDFInputView.swift */; };
 		2A7CB2B72DEFD25400658642 /* TextInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A7CB2B62DEFD25400658642 /* TextInputView.swift */; };
 		2A7CB2B92DEFD26700658642 /* URLInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A7CB2B82DEFD26700658642 /* URLInputView.swift */; };
+=======
+>>>>>>> origin/main
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,9 +50,12 @@
 		2A7CB2A12DEFCCC700658642 /* FocusAIUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FocusAIUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A7CB2A52DEFCCC700658642 /* FocusAIUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusAIUITests.swift; sourceTree = "<group>"; };
 		2A7CB2A72DEFCCC700658642 /* FocusAIUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusAIUITestsLaunchTests.swift; sourceTree = "<group>"; };
+<<<<<<< HEAD
 		2A7CB2B42DEFD23F00658642 /* PDFInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFInputView.swift; sourceTree = "<group>"; };
 		2A7CB2B62DEFD25400658642 /* TextInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInputView.swift; sourceTree = "<group>"; };
 		2A7CB2B82DEFD26700658642 /* URLInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLInputView.swift; sourceTree = "<group>"; };
+=======
+>>>>>>> origin/main
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -104,9 +110,12 @@
 				2A7CB28C2DEFCCC600658642 /* ContentView.swift */,
 				2A7CB28E2DEFCCC700658642 /* Assets.xcassets */,
 				2A7CB2902DEFCCC700658642 /* Preview Content */,
+<<<<<<< HEAD
 				2A7CB2B42DEFD23F00658642 /* PDFInputView.swift */,
 				2A7CB2B62DEFD25400658642 /* TextInputView.swift */,
 				2A7CB2B82DEFD26700658642 /* URLInputView.swift */,
+=======
+>>>>>>> origin/main
 			);
 			path = FocusAI;
 			sourceTree = "<group>";
@@ -266,10 +275,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+<<<<<<< HEAD
 				2A7CB2B52DEFD23F00658642 /* PDFInputView.swift in Sources */,
 				2A7CB28D2DEFCCC600658642 /* ContentView.swift in Sources */,
 				2A7CB2B72DEFD25400658642 /* TextInputView.swift in Sources */,
 				2A7CB2B92DEFD26700658642 /* URLInputView.swift in Sources */,
+=======
+				2A7CB28D2DEFCCC600658642 /* ContentView.swift in Sources */,
+>>>>>>> origin/main
 				2A7CB28B2DEFCCC600658642 /* FocusAIApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
