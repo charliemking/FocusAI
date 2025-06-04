@@ -1,0 +1,10 @@
+{
+  "model_list": [
+    {
+      "model_id": "Mistral-7B-Instruct-v0.2-q4f16_1",
+      "model_lib": "mistral_q4f16_1_bde2f2d951c20f4070f07718073e298d",
+      "model_url": "https://huggingface.co/mlc-ai/Mistral-7B-Instruct-v0.2-q4f16_1-MLC",
+      "estimated_vram_bytes": 3316000000
+    }
+  ]
+}
