@@ -127,3 +127,39 @@ coverage/
 *.tmp
 tmp/
 temp/
+
+# Model files
+Resources/models/**/*.mlc
+Resources/models/**/*.bin
+Resources/models/**/*.model
+Resources/models/**/*.json
+
+# Python environment
+miniconda.sh
+miniconda/
+mlc-llm/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# macOS
+.AppleDouble
+.LSOverride
+._*

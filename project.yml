@@ -1,87 +1,39 @@
 name: FocusAI
 options:
-  bundleIdPrefix: com.focusai
+  bundleIdPrefix: com.charliemking
   deploymentTarget:
-    iOS: 17.0
-  xcodeVersion: "15.0"
-  generateEmptyDirectories: true
-  createIntermediateGroups: true
+    iOS: 15.0
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+    SWIFT_VERSION: 5.5
 
 targets:
   FocusAI:
     type: application
     platform: iOS
     sources:
-      - path: FocusAI/App
-        name: App
-      - path: FocusAI/Models
-        name: Models
-      - path: FocusAI/Views
-        name: Views
-      - path: FocusAI/Controllers
-        name: Controllers
-      - path: FocusAI/Resources
-        name: Resources
-        type: folder
+      - FocusAI
+      - Resources
     settings:
       base:
-        INFOPLIST_FILE: FocusAI/App/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: com.focusai.app
-        DEVELOPMENT_TEAM: RVAB7Q4ET8
-    dependencies:
-      - framework: CoreData.framework
-      - framework: CoreSpotlight.framework
-      - framework: PDFKit.framework
-      - framework: UniformTypeIdentifiers.framework
-    info:
-      path: FocusAI/Info.plist
-      properties:
-        CFBundleName: FocusAI
-        CFBundleDisplayName: FocusAI
-        CFBundleIdentifier: com.focusai.app
-        CFBundleShortVersionString: 1.0.0
-        CFBundleVersion: 1
-        UILaunchStoryboardName: LaunchScreen
-        UIMainStoryboardFile: ""
-        UIRequiresFullScreen: true
-        UISupportedInterfaceOrientations:
-          - UIInterfaceOrientationPortrait
-        UIBackgroundModes:
-          - fetch
-          - processing
-        LSSupportsOpeningDocumentsInPlace: true
-        UIFileSharingEnabled: true
-        NSDocumentsFolderUsageDescription: FocusAI needs access to documents to process PDFs and text files for study assistance.
+        INFOPLIST_FILE: FocusAI/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.charliemking.focusai
+    dependencies: []
 
   FocusAITests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: FocusAI/Tests
-        name: Tests
+      - Tests
     dependencies:
       - target: FocusAI
-    settings:
-      base:
-        INFOPLIST_FILE: FocusAI/Tests/Resources/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: com.focusai.tests
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/FocusAI.app/FocusAI
-        BUNDLE_LOADER: $(TEST_HOST)
-        DEVELOPMENT_TEAM: RVAB7Q4ET8
 
   FocusAIUITests:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - path: FocusAI/UITests
-        excludes:
-          - "Resources"
-      - path: FocusAI/UITests/Resources
-        type: folder
+      - UITests
     dependencies:
-      - target: FocusAI
-    settings:
-      base:
-        INFOPLIST_FILE: FocusAI/UITests/Resources/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: com.focusai.uitests
-        DEVELOPMENT_TEAM: RVAB7Q4ET8 
+      - target: FocusAI 
