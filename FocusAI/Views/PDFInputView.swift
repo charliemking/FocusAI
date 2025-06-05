@@ -1,20 +1,28 @@
 import SwiftUI
 import PDFKit
 import UniformTypeIdentifiers
+import Foundation
 
 struct PDFInputView: View {
     @State private var isShowingFilePicker = false
     @State private var selectedDocument: Document?
+    @State private var pdfDocument: PDFDocument?
     @State private var isProcessing = false
     @State private var errorMessage: String?
+    
+    enum PDFError: Error {
+        case pdfExtractionFailed
+    }
     
     var body: some View {
         NavigationView {
             VStack {
                 if let document = selectedDocument {
                     // PDF Preview
-                    PDFService.shared.previewPDF(url: document.source.pdfURL!)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    if let pdfDoc = pdfDocument {
+                        PDFKitView(pdfDocument: pdfDoc)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                     
                     // Action Buttons
                     HStack {
@@ -75,7 +83,16 @@ struct PDFInputView: View {
                         guard let url = urls.first else { return }
                         
                         // Create document from PDF
-                        selectedDocument = try await PDFService.shared.createDocument(from: url)
+                        let pdfDoc = PDFDocument(url: url)
+                        if let pdfDoc = pdfDoc {
+                            pdfDocument = pdfDoc
+                            selectedDocument = Document(
+                                source: .pdf(url),
+                                title: url.deletingPathExtension().lastPathComponent
+                            )
+                        } else {
+                            throw PDFError.pdfExtractionFailed
+                        }
                         
                     } catch {
                         errorMessage = error.localizedDescription
@@ -85,6 +102,21 @@ struct PDFInputView: View {
                 }
             }
         }
+    }
+}
+
+struct PDFKitView: UIViewRepresentable {
+    let pdfDocument: PDFDocument
+    
+    func makeUIView(context: Context) -> PDFView {
+        let pdfView = PDFView()
+        pdfView.document = pdfDocument
+        pdfView.autoScales = true
+        return pdfView
+    }
+    
+    func updateUIView(_ uiView: PDFView, context: Context) {
+        uiView.document = pdfDocument
     }
 }
 

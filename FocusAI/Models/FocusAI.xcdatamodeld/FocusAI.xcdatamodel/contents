@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23C64" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="StoredDocument" representedClassName="StoredDocument" syncable="YES" codeGenerationType="class">
+        <attribute name="content" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <relationship name="flashcards" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="StoredFlashcard" inverseName="document" inverseEntity="StoredFlashcard"/>
+        <relationship name="summaries" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="StoredSummary" inverseName="document" inverseEntity="StoredSummary"/>
+    </entity>
+    <entity name="StoredFlashcard" representedClassName="StoredFlashcard" syncable="YES" codeGenerationType="class">
+        <attribute name="answer" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="question" optional="YES" attributeType="String"/>
+        <relationship name="document" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="StoredDocument" inverseName="flashcards" inverseEntity="StoredDocument"/>
+    </entity>
+    <entity name="StoredSummary" representedClassName="StoredSummary" syncable="YES" codeGenerationType="class">
+        <attribute name="content" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="document" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="StoredDocument" inverseName="summaries" inverseEntity="StoredDocument"/>
+    </entity>
+    <entity name="PerformanceMetric" representedClassName="PerformanceMetric" syncable="YES" codeGenerationType="class">
+        <attribute name="eventType" optional="YES" attributeType="String"/>
+        <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
+</model> 

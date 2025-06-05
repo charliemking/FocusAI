@@ -1,53 +1,38 @@
 import SwiftUI
 
 struct StudyView: View {
-    @State private var documents: [Document] = []
+    @ObservedObject var document: Document
+    @State private var showingFlashcards = false
     
     var body: some View {
-        NavigationView {
-            List {
-                if documents.isEmpty {
-                    Text("No study materials yet")
-                        .foregroundColor(.secondary)
-                } else {
-                    ForEach(documents) { document in
-                        DocumentRow(document: document)
-                    }
+        List {
+            Section(header: Text("Document")) {
+                DocumentRow(document: document, showPreview: false)
+            }
+            
+            Section(header: Text("Study Options")) {
+                Button("Review Flashcards") {
+                    showingFlashcards = true
                 }
             }
-            .navigationTitle("Study Materials")
         }
-    }
-}
-
-struct DocumentRow: View {
-    let document: Document
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(document.title)
-                .font(.headline)
-            
-            if let summary = document.summary {
-                Text("Summary available")
-                    .font(.subheadline)
-                    .foregroundColor(.green)
+        .navigationTitle("Study")
+        .sheet(isPresented: $showingFlashcards) {
+            NavigationView {
+                FlashcardView(question: document.flashcards.first?.question ?? "",
+                             answer: document.flashcards.first?.answer ?? "No flashcards available")
+                    .navigationTitle("Flashcards")
+                    .navigationBarItems(trailing: Button("Done") {
+                        showingFlashcards = false
+                    })
             }
-            
-            if let flashcards = document.flashcards {
-                Text("\(flashcards.count) flashcards")
-                    .font(.subheadline)
-                    .foregroundColor(.blue)
-            }
-            
-            Text(document.dateCreated, style: .date)
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
-        .padding(.vertical, 4)
     }
 }
 
 #Preview {
-    StudyView()
+    StudyView(document: Document(
+        source: .text("Sample content"),
+        title: "Sample Document"
+    ))
 } 

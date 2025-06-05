@@ -47,6 +47,9 @@ playground.xcworkspace
 # *.xcodeproj
 #
 .build/
+Packages/
+Package.pins
+Package.resolved
 
 # CocoaPods
 #
@@ -93,3 +96,34 @@ iOSInjectionProject/
 *.gguf
 *.bin
 mlc-llm-models/
+
+# ML Models
+#
+*.mlc
+*.mlmodel
+*.mlpackage
+FocusAI/Resources/mistral*
+dist/models/
+
+# Downloaded model repositories
+Mistral-7B-Instruct*
+
+# Code coverage
+#
+*.coverage
+*.lcov
+coverage/
+
+# IDE
+#
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+#
+*.log
+*.tmp
+tmp/
+temp/
