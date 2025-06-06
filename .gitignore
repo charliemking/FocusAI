@@ -104,6 +104,7 @@ mlc-llm-models/
 *.mlpackage
 FocusAI/Resources/mistral*
 dist/models/
+binary-mlc-llm-libs/
 
 # Downloaded model repositories
 Mistral-7B-Instruct*
