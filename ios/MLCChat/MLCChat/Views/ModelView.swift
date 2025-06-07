@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import MLCSwift
 
 struct ModelView: View {
     @EnvironmentObject private var modelState: ModelState
@@ -17,24 +18,24 @@ struct ModelView: View {
     var body: some View {
         VStack(alignment: .leading) {
             if (modelState.modelDownloadState == .finished) {
-                NavigationLink(destination:
-                                ChatView()
-                    .environmentObject(chatState)
-                    .onAppear {
-                        modelState.startChat(chatState: chatState)
-                    }
-                ) {
+                NavigationLink {
+                    ChatView()
+                        .environmentObject(chatState)
+                        .onAppear {
+                            modelState.startChat(chatState: chatState)
+                        }
+                } label: {
                     HStack {
-                        Text(modelState.modelConfig.modelID!)
+                        Text(modelState.modelConfig.modelID ?? "Unknown Model")
                         Spacer()
-                        if chatState.isCurrentModel(modelID: modelState.modelConfig.modelID!) {
+                        if chatState.isCurrentModel(modelID: modelState.modelConfig.modelID ?? "") {
                             Image(systemName: "checkmark").foregroundColor(.blue)
                         }
                     }
                 }
                 .buttonStyle(.borderless)
             } else {
-                Text(modelState.modelConfig.modelID!).opacity(0.5)
+                Text(modelState.modelConfig.modelID ?? "Unknown Model").opacity(0.5)
             }
             HStack{
                 if modelState.modelDownloadState != .finished || isRemoving {

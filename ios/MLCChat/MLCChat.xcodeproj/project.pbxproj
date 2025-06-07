@@ -412,7 +412,12 @@
 				DEVELOPMENT_TEAM = Q78UHX93YB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				"HEADER_SEARCH_PATHS[arch=*]" = "";
+				"HEADER_SEARCH_PATHS[arch=*]" = (
+					"$(SRCROOT)/../mlc-llm/3rdparty/tvm/include",
+					"$(SRCROOT)/../mlc-llm/3rdparty/mlc-core/include",
+					"$(SRCROOT)/../mlc-llm/3rdparty/dlpack/include",
+					"$(SRCROOT)/../MLCSwift/Sources/ObjC",
+				);
 				INFOPLIST_FILE = MLCChat/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app requires usage of camera to function properly.";
@@ -465,7 +470,11 @@
 				DEVELOPMENT_TEAM = Q78UHX93YB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				"HEADER_SEARCH_PATHS[arch=*]" = "";
+				"HEADER_SEARCH_PATHS[arch=*]" = (
+					"$(SRCROOT)/../mlc-llm/3rdparty/tvm/include",
+					"$(SRCROOT)/../mlc-llm/3rdparty/mlc-core/include",
+					"$(SRCROOT)/../mlc-llm/3rdparty/dlpack/include",
+				);
 				INFOPLIST_FILE = MLCChat/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app requires usage of camera to function properly.";

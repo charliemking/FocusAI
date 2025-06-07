@@ -4,234 +4,126 @@
 //
 
 import SwiftUI
-import GameController
 import MLCSwift
+import MarkdownUI
 
-struct ChatView: View {
-    @StateObject private var chatState = ChatState()
-    @ObservedObject var modelState: ModelState
-    @Environment(\.scenePhase) var scenePhase
-    @State private var inputText = ""
-    @State private var isGenerating = false
-    @FocusState private var isFocused: Bool
-    @Environment(\.dismiss) private var dismiss
-    @Namespace private var messagesBottomID
-
-    // vision-related properties
-    @State private var showActionSheet: Bool = false
-    @State private var showImagePicker: Bool = false
-    @State private var imageConfirmed: Bool = false
-    @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
-    @State private var image: UIImage?
-
+struct LoadingView: View {
     var body: some View {
-        Group {
-            switch modelState.loadingState {
-            case .notLoaded, .loading:
-                LoadingView(message: "Loading AI Model...")
-            case .loaded:
-                mainChatView
-            case .error(let error):
-                ErrorView(error: error) {
-                    modelState.loadModel()
-                }
-            }
-        }
-        .onAppear {
-            if case .notLoaded = modelState.loadingState {
-                modelState.loadModel()
-            }
-        }
-        .navigationBarTitle("MLC Chat: \(chatState.displayName)", displayMode: .inline)
-        .navigationBarBackButtonHidden()
-        .onChange(of: scenePhase) { oldPhase, newPhase in
-            switch newPhase {
-            case .background:
-                modelState.handleBackground()
-            case .active:
-                modelState.handleForeground()
-            default:
-                break
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.backward")
-                }
-                .buttonStyle(.borderless)
-                .disabled(!chatState.isInterruptible)
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack {
-                    MemoryUsageView()
-                    
-                    Button("Reset") {
-                        image = nil
-                        imageConfirmed = false
-                        chatState.requestResetChat()
-                    }
-                    .padding()
-                    .disabled(!chatState.isResettable)
-                }
-            }
-        }
+        ProgressView("Loading model...")
+            .progressViewStyle(.circular)
     }
+}
+
+struct ErrorView: View {
+    let error: Error
+    let retryAction: () -> Void
     
-    private var mainChatView: some View {
+    var body: some View {
         VStack {
-            modelInfoView
-            messagesView
-            uploadImageView
-            messageInputView
-        }
-        .alert("Error", isPresented: $chatState.showError) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(chatState.errorMessage ?? "An unknown error occurred")
-        }
-    }
-
-    private var modelInfoView: some View {
-        Text(chatState.infoText)
-            .multilineTextAlignment(.center)
-            .opacity(0.5)
-            .listRowSeparator(.hidden)
-    }
-
-    private var messagesView: some View {
-        ScrollViewReader { scrollViewProxy in
-            ScrollView {
-                VStack {
-                    let messageCount = chatState.displayMessages.count
-                    let hasSystemMessage = messageCount > 0 && chatState.displayMessages[0].role == MessageRole.assistant
-                    let startIndex = hasSystemMessage ? 1 : 0
-
-                    // display the system message
-                    if hasSystemMessage {
-                        MessageView(role: chatState.displayMessages[0].role, message: chatState.displayMessages[0].message, isMarkdownSupported: false)
-                    }
-
-                    // display image
-                    if let image, imageConfirmed {
-                        ImageView(image: image)
-                    }
-
-                    // display conversations
-                    ForEach(chatState.displayMessages[startIndex...], id: \.id) { message in
-                        MessageView(role: message.role, message: message.message)
-                    }
-                    HStack { EmptyView() }
-                        .id(messagesBottomID)
-                }
-            }
-            .onChange(of: chatState.displayMessages) { _ in
-                withAnimation {
-                    scrollViewProxy.scrollTo(messagesBottomID, anchor: .bottom)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var uploadImageView: some View {
-        if chatState.legacyUseImage && !imageConfirmed {
-            if image == nil {
-                Button("Upload picture to chat") {
-                    showActionSheet = true
-                }
-                .actionSheet(isPresented: $showActionSheet) {
-                    ActionSheet(title: Text("Choose from"), buttons: [
-                        .default(Text("Photo Library")) {
-                            showImagePicker = true
-                            imageSourceType = .photoLibrary
-                        },
-                        .default(Text("Camera")) {
-                            showImagePicker = true
-                            imageSourceType = .camera
-                        },
-                        .cancel()
-                    ])
-                }
-                .sheet(isPresented: $showImagePicker) {
-                    ImagePicker(image: $image,
-                                showImagePicker: $showImagePicker,
-                                imageSourceType: imageSourceType)
-                }
-                .disabled(!chatState.isUploadable)
-            } else {
-                VStack {
-                    if let image {
-                        Image(uiImage: image)
-                            .resizable()
-                            .frame(width: 300, height: 300)
-
-                        HStack {
-                            Button("Undo") {
-                                self.image = nil
-                            }
-                            .padding()
-
-                            Button("Submit") {
-                                imageConfirmed = true
-                            }
-                            .padding()
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private var messageInputView: some View {
-        VStack(spacing: 0) {
-            Divider()
-            HStack(alignment: .bottom) {
-                TextField("Type a message...", text: $inputText, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .focused($isFocused)
-                    .disabled(isGenerating)
-                
-                Button(action: sendMessage) {
-                    Image(systemName: isGenerating ? "stop.fill" : "arrow.up.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(inputText.isEmpty ? .gray : .blue)
-                }
-                .disabled(inputText.isEmpty && !isGenerating)
-            }
-            .padding()
-        }
-        .background(.thinMaterial)
-    }
-    
-    private func sendMessage() {
-        if isGenerating {
-            // TODO: Implement stop generation
-            return
-        }
-        
-        guard !inputText.isEmpty else { return }
-        
-        let userMessage = inputText
-        inputText = ""
-        
-        Task {
-            isGenerating = true
-            defer { isGenerating = false }
+            Text("Error: \(error.localizedDescription)")
+                .foregroundColor(.red)
+                .multilineTextAlignment(.center)
+                .padding()
             
-            do {
-                let response = try await modelState.generate(prompt: userMessage)
-                await chatState.addMessage(role: .user, content: userMessage)
-                await chatState.addMessage(role: .assistant, content: response)
-            } catch {
-                await chatState.showError(message: error.localizedDescription)
-            }
+            Button("Retry", action: retryAction)
+                .buttonStyle(.borderedProminent)
         }
     }
 }
 
+struct MemoryUsageView: View {
+    var body: some View {
+        Text("Memory usage information will be displayed here")
+            .font(.caption)
+            .foregroundColor(.secondary)
+    }
+}
+
+struct ChatView: View {
+    @StateObject var chatState = ChatState()
+    @State private var inputText = ""
+    @State private var isInputEnabled = true
+    
+    var body: some View {
+        VStack {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    ForEach(chatState.messages) { message in
+                        MessageView(message: message)
+                    }
+                }
+                .padding()
+            }
+            
+            Divider()
+            
+            HStack {
+                TextField("Type your message...", text: $inputText)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .disabled(!isInputEnabled)
+                
+                Button(action: sendMessage) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title)
+                }
+                .disabled(inputText.isEmpty || !isInputEnabled)
+            }
+            .padding()
+        }
+        .navigationTitle("Chat")
+        .alert("Error", isPresented: $chatState.showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(chatState.errorMessage)
+        }
+        .onAppear {
+            let config = ModelConfig(
+                tokenizerFiles: ["tokenizer.json"],
+                modelLib: "mlc-chat-Mistral-7B-v0.1-q4f16_1",
+                modelID: "mistral-7b-v0.1",
+                estimatedVRAMReq: 8000
+            )
+            chatState.requestReloadChat(
+                modelID: config.modelID ?? "",
+                modelLib: config.modelLib ?? "",
+                modelPath: "/path/to/model",
+                estimatedVRAMReq: Double(config.estimatedVRAMReq ?? 8000),
+                displayName: "Mistral 7B"
+            )
+        }
+    }
+    
+    private func sendMessage() {
+        guard !inputText.isEmpty else { return }
+        let message = inputText
+        inputText = ""
+        isInputEnabled = false
+        
+        chatState.sendMessage(message)
+        isInputEnabled = true
+    }
+}
+
+struct MessageView: View {
+    let message: MessageData
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(message.role.rawValue.capitalized)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Markdown(message.content)
+                .markdownTheme(.gitHub)
+        }
+        .padding()
+        .background(message.role == .assistant ? Color.blue.opacity(0.1) : Color.clear)
+        .cornerRadius(8)
+    }
+}
+
 #Preview {
-    ChatView(modelState: ModelState())
+    NavigationView {
+        ChatView()
+    }
 }

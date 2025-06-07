@@ -6,33 +6,22 @@ struct ErrorView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "exclamationmark.triangle.fill")
+            Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 50))
                 .foregroundColor(.red)
             
             Text("Error")
                 .font(.title)
-                .fontWeight(.bold)
             
             Text(error.localizedDescription)
-                .font(.body)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
-                .foregroundColor(.secondary)
             
-            Button(action: retryAction) {
-                Text("Try Again")
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: 200)
-                    .padding()
-                    .background(Color.blue)
-                    .cornerRadius(10)
+            Button("Retry") {
+                retryAction()
             }
-            .padding(.top)
+            .buttonStyle(.borderedProminent)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
     }
 }
 
