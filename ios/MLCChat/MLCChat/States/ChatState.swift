@@ -5,44 +5,50 @@
 
 import Foundation
 import MLCSwift
+import MLCChat
+import SwiftUI
 
-enum MessageRole {
+public enum MessageRole: String {
+    case system
     case user
     case assistant
 }
 
-extension MessageRole {
-    var isUser: Bool { self == .user }
-}
-
-struct MessageData: Hashable {
-    let id = UUID()
-    var role: MessageRole
-    var message: String
+public struct MessageData: Identifiable, Hashable {
+    public let id = UUID()
+    public let role: MessageRole
+    public let content: String
+    public let timestamp: Date
+    
+    public init(role: MessageRole, content: String, timestamp: Date = Date()) {
+        self.role = role
+        self.content = content
+        self.timestamp = timestamp
+    }
 }
 
 final class ChatState: ObservableObject {
-    fileprivate enum ModelChatState {
-        case generating
-        case resetting
-        case reloading
-        case terminating
-        case ready
-        case failed
-        case pendingImageUpload
-        case processingImage
+    @Published private(set) var modelChatState: ModelChatState = .ready {
+        didSet {
+            objectWillChange.send()
+        }
     }
-
-    @Published var displayMessages = [MessageData]()
-    @Published var infoText = ""
+    
+    @Published private(set) var messages: [MessageData] = []
+    @Published var showError = false
+    @Published var errorMessage = ""
     @Published var displayName = ""
-    // this is a legacy UI option for upload image
-    // TODO(mlc-team) support new UI for image processing
+    @Published var infoText = ""
     @Published var legacyUseImage = false
-
+    
     private let modelChatStateLock = NSLock()
-    private var modelChatState: ModelChatState = .ready
-
+    var modelID: String?
+    var modelLib: String?
+    var modelPath: String?
+    var estimatedVRAMReq: Double?
+    
+    var displayMessages: [MessageData] { messages }
+    
     // the new mlc engine
     private let engine = MLCEngine()
     // history messages
@@ -51,31 +57,46 @@ final class ChatState: ObservableObject {
     // streaming text that get updated
     private var streamingText = ""
 
-    private var modelLib = ""
-    private var modelPath = ""
-    var modelID = ""
-
+    var isGenerating: Bool {
+        return modelChatState == .generating
+    }
+    
+    var isReloading: Bool {
+        return modelChatState == .reloading
+    }
+    
+    var isError: Bool {
+        if case .error = modelChatState {
+            return true
+        }
+        return false
+    }
+    
+    var canSendMessage: Bool {
+        return modelChatState == .ready
+    }
+    
     init() {
     }
 
     var isInterruptible: Bool {
-        return getModelChatState() == .ready
-        || getModelChatState() == .generating
-        || getModelChatState() == .failed
-        || getModelChatState() == .pendingImageUpload
+        return modelChatState == .ready
+            || modelChatState == .generating
+            || modelChatState == .failed
+            || modelChatState == .pendingImageUpload
     }
 
     var isChattable: Bool {
-        return getModelChatState() == .ready
+        return modelChatState == .ready
     }
 
     var isUploadable: Bool {
-        return getModelChatState() == .pendingImageUpload
+        return modelChatState == .pendingImageUpload
     }
 
     var isResettable: Bool {
-        return getModelChatState() == .ready
-        || getModelChatState() == .generating
+        return modelChatState == .ready
+            || modelChatState == .generating
     }
 
     func requestResetChat() {
@@ -90,7 +111,7 @@ final class ChatState: ObservableObject {
     // reset the chat if we switch to background
     // during generation to avoid permission issue
     func requestSwitchToBackground() {
-        if (getModelChatState() == .generating) {
+        if (modelChatState == .generating) {
             self.requestResetChat()
         }
     }
@@ -105,22 +126,32 @@ final class ChatState: ObservableObject {
         })
     }
 
-    func requestReloadChat(modelID: String, modelLib: String, modelPath: String, estimatedVRAMReq: Int, displayName: String) {
-        if (isCurrentModel(modelID: modelID)) {
-            return
+    func requestReloadChat(
+        modelID: String,
+        modelLib: String,
+        modelPath: String,
+        estimatedVRAMReq: Double,
+        displayName: String
+    ) {
+        self.modelID = modelID
+        self.modelLib = modelLib
+        self.modelPath = modelPath
+        self.estimatedVRAMReq = estimatedVRAMReq
+        self.displayName = displayName
+        
+        setModelChatState(.reloading)
+        
+        Task {
+            do {
+                try await reloadChat()
+                setModelChatState(.ready)
+            } catch {
+                setModelChatState(.error(error))
+                self.errorMessage = error.localizedDescription
+                self.showError = true
+            }
         }
-        assert(isInterruptible)
-        interruptChat(prologue: {
-            switchToReloading()
-        }, epilogue: { [weak self] in
-            self?.mainReloadChat(modelID: modelID,
-                                 modelLib: modelLib,
-                                 modelPath: modelPath,
-                                 estimatedVRAMReq: estimatedVRAMReq,
-                                 displayName: displayName)
-        })
     }
-
 
     func requestGenerate(prompt: String) {
         assert(isChattable)
@@ -152,7 +183,7 @@ final class ChatState: ObservableObject {
                 if let finalUsage = res.usage {
                     finalUsageTextLabel = finalUsage.extra?.asTextLabel() ?? ""
                 }
-                if getModelChatState() != .generating {
+                if modelChatState != .generating {
                     break
                 }
 
@@ -163,7 +194,7 @@ final class ChatState: ObservableObject {
 
                 let newText = updateText
                 DispatchQueue.main.async {
-                    self.updateMessage(role: .assistant, message: newText)
+                    self.updateMessage(role: .assistant, content: newText)
                 }
             }
 
@@ -187,7 +218,7 @@ final class ChatState: ObservableObject {
                 self.historyMessages.removeSubrange(0..<removeEnd)
             }
 
-            if getModelChatState() == .generating {
+            if modelChatState == .generating {
                 let runtimStats = finalUsageTextLabel
 
                 DispatchQueue.main.async {
@@ -202,6 +233,52 @@ final class ChatState: ObservableObject {
     func isCurrentModel(modelID: String) -> Bool {
         return self.modelID == modelID
     }
+
+    func addMessage(role: MessageRole, content: String) {
+        messages.append(MessageData(role: role, content: content, timestamp: Date()))
+    }
+
+    func updateMessage(role: MessageRole, content: String) {
+        messages.append(MessageData(role: role, content: content))
+    }
+
+    func clearMessages() {
+        messages.removeAll()
+        infoText = ""
+        historyMessages.removeAll()
+        streamingText = ""
+    }
+
+    func sendMessage(_ content: String) {
+        guard canSendMessage else { return }
+        
+        updateMessage(role: .user, content: content)
+        setModelChatState(.generating)
+        
+        Task {
+            do {
+                var response = ""
+                for try await chunk in engine.chat.completions.create(messages: [.init(role: .user, content: content)]) {
+                    if let delta = chunk.choices.first?.delta.content {
+                        response += delta
+                        updateMessage(role: .assistant, content: response)
+                    }
+                }
+                setModelChatState(.ready)
+            } catch {
+                setModelChatState(.error(error))
+                self.errorMessage = error.localizedDescription
+                self.showError = true
+            }
+        }
+    }
+    
+    private func reloadChat() async throws {
+        messages.removeAll()
+        historyMessages.removeAll()
+        streamingText = ""
+        // Add initialization code here
+    }
 }
 
 private extension ChatState {
@@ -211,25 +288,108 @@ private extension ChatState {
         return modelChatState
     }
 
-    func setModelChatState(_ newModelChatState: ModelChatState) {
+    func setModelChatState(_ newState: ModelChatState) {
         modelChatStateLock.lock()
-        modelChatState = newModelChatState
-        modelChatStateLock.unlock()
+        defer { modelChatStateLock.unlock() }
+        modelChatState = newState
     }
 
     func appendMessage(role: MessageRole, message: String) {
-        displayMessages.append(MessageData(role: role, message: message))
+        messages.append(MessageData(role: role, content: message, timestamp: Date()))
     }
 
-    func updateMessage(role: MessageRole, message: String) {
-        displayMessages[displayMessages.count - 1] = MessageData(role: role, message: message)
+    func interruptChat(prologue: () -> Void, epilogue: @escaping () -> Void) {
+        assert(isInterruptible)
+        if modelChatState == .ready
+            || modelChatState == .failed
+            || modelChatState == .pendingImageUpload {
+            prologue()
+            epilogue()
+        } else if modelChatState == .generating {
+            prologue()
+            DispatchQueue.main.async {
+                epilogue()
+            }
+        } else {
+            assert(false)
+        }
     }
 
-    func clearHistory() {
-        displayMessages.removeAll()
-        infoText = ""
-        historyMessages.removeAll()
-        streamingText = ""
+    func mainResetChat() {
+        Task {
+            await engine.reset()
+            self.historyMessages = []
+            self.streamingText = ""
+
+            DispatchQueue.main.async {
+                self.clearMessages()
+                self.switchToReady()
+            }
+        }
+    }
+
+    func mainTerminateChat(callback: @escaping () -> Void) {
+        Task {
+            await engine.unload()
+            DispatchQueue.main.async {
+                self.clearMessages()
+                self.modelID = nil
+                self.modelLib = nil
+                self.modelPath = nil
+                self.displayName = ""
+                self.legacyUseImage = false
+                self.switchToReady()
+                callback()
+            }
+        }
+    }
+
+    func mainReloadChat(modelID: String, modelLib: String, modelPath: String, estimatedVRAMReq: Int, displayName: String) {
+        clearMessages()
+        self.modelID = modelID
+        self.modelLib = modelLib
+        self.modelPath = modelPath
+        self.displayName = displayName
+
+        Task {
+            DispatchQueue.main.async {
+                self.appendMessage(role: .assistant, message: "[System] Initalize...")
+            }
+
+            await engine.unload()
+            let vRAM = os_proc_available_memory()
+            if (vRAM < estimatedVRAMReq) {
+                let requiredMemory = String (
+                    format: "%.1fMB", Double(estimatedVRAMReq) / Double(1 << 20)
+                )
+                let errorMessage = (
+                    "Sorry, the system cannot provide \(requiredMemory) VRAM as requested to the app, " +
+                    "so we cannot initialize this model on this device."
+                )
+                DispatchQueue.main.sync {
+                    self.displayMessages.append(MessageData(role: MessageRole.assistant, content: errorMessage, timestamp: Date()))
+                    self.switchToFailed()
+                }
+                return
+            }
+            await engine.reload(
+                modelPath: modelPath, modelLib: modelLib
+            )
+
+            // run a simple prompt with empty content to warm up system prompt
+            // helps to start things before user start typing
+            for await _ in await engine.chat.completions.create(
+                messages: [ChatCompletionMessage(role: .user, content: "")],
+                max_tokens: 1
+            ) {}
+
+            // TODO(mlc-team) run a system message prefill
+            DispatchQueue.main.async {
+                self.updateMessage(role: .assistant, content: "[System] Ready to chat")
+                self.switchToReady()
+            }
+
+        }
     }
 
     func switchToResetting() {
@@ -262,99 +422,5 @@ private extension ChatState {
 
     func switchToProcessingImage() {
         setModelChatState(.processingImage)
-    }
-
-    func interruptChat(prologue: () -> Void, epilogue: @escaping () -> Void) {
-        assert(isInterruptible)
-        if getModelChatState() == .ready
-            || getModelChatState() == .failed
-            || getModelChatState() == .pendingImageUpload {
-            prologue()
-            epilogue()
-        } else if getModelChatState() == .generating {
-            prologue()
-            DispatchQueue.main.async {
-                epilogue()
-            }
-        } else {
-            assert(false)
-        }
-    }
-
-    func mainResetChat() {
-        Task {
-            await engine.reset()
-            self.historyMessages = []
-            self.streamingText = ""
-
-            DispatchQueue.main.async {
-                self.clearHistory()
-                self.switchToReady()
-            }
-        }
-    }
-
-    func mainTerminateChat(callback: @escaping () -> Void) {
-        Task {
-            await engine.unload()
-            DispatchQueue.main.async {
-                self.clearHistory()
-                self.modelID = ""
-                self.modelLib = ""
-                self.modelPath = ""
-                self.displayName = ""
-                self.legacyUseImage = false
-                self.switchToReady()
-                callback()
-            }
-        }
-    }
-
-    func mainReloadChat(modelID: String, modelLib: String, modelPath: String, estimatedVRAMReq: Int, displayName: String) {
-        clearHistory()
-        self.modelID = modelID
-        self.modelLib = modelLib
-        self.modelPath = modelPath
-        self.displayName = displayName
-
-        Task {
-            DispatchQueue.main.async {
-                self.appendMessage(role: .assistant, message: "[System] Initalize...")
-            }
-
-            await engine.unload()
-            let vRAM = os_proc_available_memory()
-            if (vRAM < estimatedVRAMReq) {
-                let requiredMemory = String (
-                    format: "%.1fMB", Double(estimatedVRAMReq) / Double(1 << 20)
-                )
-                let errorMessage = (
-                    "Sorry, the system cannot provide \(requiredMemory) VRAM as requested to the app, " +
-                    "so we cannot initialize this model on this device."
-                )
-                DispatchQueue.main.sync {
-                    self.displayMessages.append(MessageData(role: MessageRole.assistant, message: errorMessage))
-                    self.switchToFailed()
-                }
-                return
-            }
-            await engine.reload(
-                modelPath: modelPath, modelLib: modelLib
-            )
-
-            // run a simple prompt with empty content to warm up system prompt
-            // helps to start things before user start typing
-            for await _ in await engine.chat.completions.create(
-                messages: [ChatCompletionMessage(role: .user, content: "")],
-                max_tokens: 1
-            ) {}
-
-            // TODO(mlc-team) run a system message prefill
-            DispatchQueue.main.async {
-                self.updateMessage(role: .assistant, message: "[System] Ready to chat")
-                self.switchToReady()
-            }
-
-        }
     }
 }

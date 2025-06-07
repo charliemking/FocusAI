@@ -6,6 +6,10 @@
 import Foundation
 import MLCSwift
 
+// Import our local types
+@_exported import struct MLCChat.ModelLoadingState
+@_exported import class MLCChat.Chat
+
 final class ModelState: ObservableObject, Identifiable {
     enum ModelDownloadState {
         case initializing
@@ -30,11 +34,12 @@ final class ModelState: ObservableObject, Identifiable {
     @Published var progress: Int = 0
     @Published var total: Int = 1
     @Published var loadingState: ModelLoadingState = .notLoaded
-    private var chat: Chat?
+    private var engine: MLCEngine?
 
-    private var modelLocalBaseURL: URL
-    private var startState: AppState
-    private var chatState: ChatState
+    var modelLocalBaseURL: URL
+    var startState: AppState
+    var chatState: ChatState
+    var modelID: String { modelConfig.modelID ?? "" }
 
     private let fileManager: FileManager = FileManager.default
     private let decoder = JSONDecoder()
@@ -81,7 +86,7 @@ final class ModelState: ObservableObject, Identifiable {
             modelID: modelConfig.modelID!,
             modelLib: modelConfig.modelLib!,
             modelPath: modelLocalBaseURL.path(),
-            estimatedVRAMReq: modelConfig.estimatedVRAMReq!,
+            estimatedVRAMReq: Double(modelConfig.estimatedVRAMReq!),
             displayName: modelConfig.modelID!.components(separatedBy: "-")[0]
         )
     }
@@ -110,51 +115,53 @@ final class ModelState: ObservableObject, Identifiable {
         loadingState = .loading
         
         do {
-            chat = try Chat()
+            engine = MLCEngine()
             loadingState = .loaded
         } catch {
             loadingState = .error(error)
-            print("Error loading model: \(error)")
         }
     }
     
     func generate(prompt: String) async throws -> String {
-        guard let chat = chat else {
-            throw NSError(domain: "ModelState", code: 1, userInfo: [NSLocalizedDescriptionKey: "Model not loaded"])
+        guard let engine = engine else {
+            throw NSError(domain: "MLCChat", code: -1, userInfo: [NSLocalizedDescriptionKey: "Engine not initialized"])
         }
-        
-        do {
-            return try await withCheckedThrowingContinuation { continuation in
-                chat.generate(prompt: prompt) { result in
-                    switch result {
-                    case .success(let response):
-                        continuation.resume(returning: response)
-                    case .failure(let error):
-                        continuation.resume(throwing: error)
-                    }
-                }
+
+        var response = ""
+        for try await chunk in engine.chat.completions.create(messages: [.init(role: .user, content: prompt)]) {
+            if let delta = chunk.choices.first?.delta.content {
+                response += delta
             }
-        } catch {
-            print("Generation error: \(error)")
-            throw error
         }
+        return response
     }
     
-    func reset() {
-        chat?.reset()
+    func reset() async {
+        engine = nil
+        loadingState = .notLoaded
+        loadModel()
     }
 
     func handleBackground() {
-        // Release memory when app goes to background
-        chat = nil
+        engine = nil
         loadingState = .notLoaded
     }
     
     func handleForeground() {
-        // Reload model when app comes to foreground
         if loadingState == .notLoaded {
             loadModel()
         }
+    }
+
+    // Convert Int to Double for VRAM requirement
+    func requestReloadChat(modelID: String, modelLib: String, modelPath: String, estimatedVRAMReq: Int, displayName: String) {
+        chatState.requestReloadChat(
+            modelID: modelID,
+            modelLib: modelLib,
+            modelPath: modelPath,
+            estimatedVRAMReq: Double(estimatedVRAMReq),
+            displayName: displayName
+        )
     }
 }
 

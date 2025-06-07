@@ -4,7 +4,11 @@
 //
 // Exposed interface of Object-C, enables swift binding.
 #import <Foundation/Foundation.h>
+#if TARGET_OS_IPHONE
 #import <UIKit/UIKit.h>
+#else
+#import <AppKit/AppKit.h>
+#endif
 
 /**
  * This is an internal Raw JSON FFI Engine that redirects request to internal JSON FFI Engine in C++

@@ -3,17 +3,21 @@
 //  LLMEngine
 //
 #import <Foundation/Foundation.h>
+#if TARGET_OS_IPHONE
 #import <UIKit/UIKit.h>
+#else
+#import <AppKit/AppKit.h>
+#endif
 #include <os/proc.h>
 
 #include "LLMEngine.h"
 
+// TVM includes
 #define TVM_USE_LIBBACKTRACE 0
-#define DMLC_USE_LOGGING_LIBRARY <tvm/runtime/logging.h>
-
-#include <tvm/ffi/function.h>
-#include <tvm/ffi/string.h>
-#include <tvm/runtime/module.h>
+#define DMLC_USE_LOGGING_LIBRARY "tvm/runtime/logging.h"
+#include "tvm/runtime/logging.h"
+#include "tvm/ir/function.h"
+#include "tvm/runtime/module.h"
 
 using namespace tvm::runtime;
 using tvm::ffi::Function;

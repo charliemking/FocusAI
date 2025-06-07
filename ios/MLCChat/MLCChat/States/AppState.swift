@@ -272,3 +272,17 @@ private extension AppState {
         }
     }
 }
+
+struct ModelConfig: Codable {
+    var tokenizerFiles: [String]?
+    var modelLib: String?
+    var modelID: String?
+    var estimatedVRAMReq: Int?
+    
+    init(tokenizerFiles: [String]?, modelLib: String?, modelID: String?, estimatedVRAMReq: Int?) {
+        self.tokenizerFiles = tokenizerFiles
+        self.modelLib = modelLib
+        self.modelID = modelID
+        self.estimatedVRAMReq = estimatedVRAMReq
+    }
+}
