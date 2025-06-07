@@ -1,0 +1,5 @@
+framework module MLCChat {
+    umbrella header "MLCChat.h"
+    export *
+    module * { export * }
+} 
