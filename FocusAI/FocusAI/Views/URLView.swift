@@ -1,12 +1,12 @@
 import SwiftUI
 
 public struct URLView: View {
-    @State private var urlString: String = ""
-    @State private var summary: String = ""
+    @State private var urlString = ""
+    @State private var isProcessing = false
+    @State private var summary = ""
     @State private var flashcards: [Flashcard] = []
-    @State private var question: String = ""
-    @State private var isLoading: Bool = false
-    @State private var errorMessage: String = ""
+    @State private var question = ""
+    @State private var errorMessage: String?
     
     private let processor = DefaultDocumentProcessor()
     private let llm = StubLLMInterface()
@@ -15,73 +15,115 @@ public struct URLView: View {
     
     public var body: some View {
         HSplitView {
-            // Left side - URL input and content preview
-            VStack {
-                HStack {
-                    TextField("Enter URL...", text: $urlString)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Button("Load") {
-                        Task {
-                            await loadURL()
-                        }
-                    }
-                    .disabled(urlString.isEmpty || isLoading)
+            // Left side - URL input
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Enter URL")
+                    .font(.headline)
+                    .foregroundColor(Theme.primaryBlue)
+                
+                TextField("https://example.com", text: $urlString)
+                    .textFieldStyle(.roundedBorder)
+                    .autocorrectionDisabled()
+                
+                if let error = errorMessage {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.caption)
                 }
                 
-                if isLoading {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if !errorMessage.isEmpty {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    Text("URL content preview will appear here")
-                        .foregroundColor(.gray)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Button("Process") {
+                    // TODO: Implement URL processing
+                    isProcessing = true
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.primaryBlue)
+                .disabled(urlString.isEmpty || isProcessing)
+                
+                Spacer()
             }
             .padding()
+            .frame(minWidth: 400)
+            .background(Theme.backgroundWhite)
             
             // Right side - Summary and Q&A
-            VStack {
+            VStack(spacing: 16) {
                 // Summary section
-                GroupBox("Summary") {
-                    Text(summary.isEmpty ? "Summary will appear here" : summary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Summary")
+                        .font(.headline)
+                        .foregroundColor(Theme.primaryBlue)
+                    
+                    if isProcessing {
+                        processingView
+                    } else {
+                        Text(summary.isEmpty ? "Summary will appear here" : summary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
+                .customGroupBox()
                 
                 // Flashcards section
-                GroupBox("Flashcards") {
-                    if flashcards.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Flashcards")
+                        .font(.headline)
+                        .foregroundColor(Theme.primaryBlue)
+                    
+                    if isProcessing {
+                        processingView
+                    } else if flashcards.isEmpty {
                         Text("Flashcards will appear here")
                             .foregroundColor(.gray)
                     } else {
                         List(flashcards) { card in
-                            VStack(alignment: .leading) {
-                                Text("Q: \\(card.question)")
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Q: \(card.question)")
                                     .font(.headline)
-                                Text("A: \\(card.answer)")
+                                Text("A: \(card.answer)")
                                     .font(.body)
                             }
+                            .padding(.vertical, 4)
                         }
+                        .listStyle(.plain)
                     }
                 }
+                .customGroupBox()
                 
                 // Q&A section
-                GroupBox("Ask a Question") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Ask a Question")
+                        .font(.headline)
+                        .foregroundColor(Theme.primaryBlue)
+                    
                     TextField("Type your question...", text: $question)
+                        .textFieldStyle(.roundedBorder)
+                    
                     Button("Ask") {
                         // TODO: Implement question handling
                     }
-                    .disabled(summary.isEmpty)
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.primaryBlue)
+                    .disabled(urlString.isEmpty || isProcessing)
                 }
+                .customGroupBox()
             }
             .frame(minWidth: 300)
             .padding()
+            .background(Theme.backgroundWhite)
         }
+    }
+    
+    private var processingView: some View {
+        VStack {
+            ProgressView()
+                .scaleEffect(0.8)
+                .controlSize(.small)
+                .tint(Theme.primaryBlue)
+            Text("Processing...")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .padding()
     }
     
     private func loadURL() async {
@@ -90,18 +132,18 @@ public struct URLView: View {
             return
         }
         
-        isLoading = true
-        errorMessage = ""
+        isProcessing = true
+        errorMessage = nil
         
         do {
             let content = try await processor.extractText(from: url)
             summary = try await llm.generateSummary(text: content)
             flashcards = try await llm.generateFlashcards(text: content)
         } catch {
-            errorMessage = "Error loading URL: \\(error.localizedDescription)"
+            errorMessage = "Error loading URL: \(error.localizedDescription)"
         }
         
-        isLoading = false
+        isProcessing = false
     }
 }
 

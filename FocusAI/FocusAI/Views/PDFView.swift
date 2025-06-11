@@ -10,17 +10,13 @@ struct ErrorAlert: Identifiable {
 
 public struct PDFView: View {
     @State private var selectedPDF: PDFDocument?
-    @State private var summary: String = ""
-    @State private var flashcards: [Flashcard] = []
-    @State private var question: String = ""
-    @State private var isShowingPicker = false
     @State private var isDragging = false
+    @State private var isShowingPicker = false
     @State private var isProcessing = false
+    @State private var summary = ""
+    @State private var flashcards: [Flashcard] = []
+    @State private var question = ""
     @State private var errorAlert: ErrorAlert?
-    @State private var isShowingOptions = false
-    
-    private let processor = DefaultDocumentProcessor()
-    private let llm = StubLLMInterface()
     
     public init() {}
     
@@ -44,6 +40,7 @@ public struct PDFView: View {
                             } label: {
                                 Image(systemName: "ellipsis.circle")
                                     .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(Theme.primaryBlue)
                             }
                             .menuStyle(.borderlessButton)
                             .menuIndicator(.hidden)
@@ -55,6 +52,8 @@ public struct PDFView: View {
                             
                             if isProcessing {
                                 Text("Processing...")
+                                    .font(.caption)
+                                    .foregroundColor(Theme.primaryBlue)
                                     .padding(8)
                                     .background(.ultraThinMaterial)
                                     .cornerRadius(8)
@@ -67,11 +66,16 @@ public struct PDFView: View {
                 }
             }
             .frame(minWidth: 400)
+            .background(Theme.backgroundWhite)
             
             // Right side - Summary and Q&A
-            VStack {
+            VStack(spacing: 16) {
                 // Summary section
-                GroupBox("Summary") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Summary")
+                        .font(.headline)
+                        .foregroundColor(Theme.primaryBlue)
+                    
                     if isProcessing {
                         processingView
                     } else {
@@ -79,9 +83,14 @@ public struct PDFView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
+                .customGroupBox()
                 
                 // Flashcards section
-                GroupBox("Flashcards") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Flashcards")
+                        .font(.headline)
+                        .foregroundColor(Theme.primaryBlue)
+                    
                     if isProcessing {
                         processingView
                     } else if flashcards.isEmpty {
@@ -89,27 +98,40 @@ public struct PDFView: View {
                             .foregroundColor(.gray)
                     } else {
                         List(flashcards) { card in
-                            VStack(alignment: .leading) {
-                                Text("Q: \\(card.question)")
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Q: \(card.question)")
                                     .font(.headline)
-                                Text("A: \\(card.answer)")
+                                Text("A: \(card.answer)")
                                     .font(.body)
                             }
+                            .padding(.vertical, 4)
                         }
+                        .listStyle(.plain)
                     }
                 }
+                .customGroupBox()
                 
                 // Q&A section
-                GroupBox("Ask a Question") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Ask a Question")
+                        .font(.headline)
+                        .foregroundColor(Theme.primaryBlue)
+                    
                     TextField("Type your question...", text: $question)
+                        .textFieldStyle(.roundedBorder)
+                    
                     Button("Ask") {
                         // TODO: Implement question handling
                     }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.primaryBlue)
                     .disabled(selectedPDF == nil || isProcessing)
                 }
+                .customGroupBox()
             }
             .frame(minWidth: 300)
             .padding()
+            .background(Theme.backgroundWhite)
         }
         .fileImporter(
             isPresented: $isShowingPicker,
@@ -132,6 +154,7 @@ public struct PDFView: View {
             ProgressView()
                 .scaleEffect(0.8)
                 .controlSize(.small)
+                .tint(Theme.primaryBlue)
             Text("Processing...")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -144,17 +167,21 @@ public struct PDFView: View {
         VStack {
             Image(systemName: "doc.fill")
                 .font(.system(size: 48))
-                .foregroundColor(isDragging ? .accentColor : .gray)
+                .foregroundColor(isDragging ? Theme.primaryBlue : .gray)
             Text("Drop PDF here or click to select")
-                .foregroundColor(isDragging ? .accentColor : .gray)
+                .foregroundColor(isDragging ? Theme.primaryBlue : .gray)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [10]))
-                .foregroundColor(isDragging ? .accentColor : .gray)
+                .strokeBorder(
+                    style: StrokeStyle(lineWidth: 2, dash: [10])
+                )
+                .foregroundColor(isDragging ? Theme.primaryBlue : .gray)
                 .padding()
         )
+        .background(Theme.lightBlue.opacity(isDragging ? 0.3 : 0))
+        .animation(.easeInOut(duration: 0.2), value: isDragging)
         .onTapGesture {
             isShowingPicker = true
         }
@@ -167,127 +194,36 @@ public struct PDFView: View {
         )
     }
     
+    private func clearCurrentPDF() {
+        selectedPDF = nil
+        summary = ""
+        flashcards = []
+        question = ""
+    }
+    
     private func handleSelectedFile(_ result: Result<[URL], Error>) {
-        switch result {
-        case .success(let urls):
-            guard let url = urls.first else { return }
-            
-            // Get security scoped access to the file
-            guard url.startAccessingSecurityScopedResource() else {
-                showError(title: "Access Error", message: "Could not access the selected PDF file.")
-                return
-            }
-            
-            defer {
-                url.stopAccessingSecurityScopedResource()
-            }
-            
-            // Copy the file to our app's documents directory
-            let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            let destinationURL = documentsDirectory.appendingPathComponent(url.lastPathComponent)
-            
-            do {
-                // Remove any existing file
-                if FileManager.default.fileExists(atPath: destinationURL.path) {
-                    try FileManager.default.removeItem(at: destinationURL)
-                }
-                
-                // Copy the file
-                try FileManager.default.copyItem(at: url, to: destinationURL)
-                print("Successfully copied file to: \\(destinationURL)")
-                
-                // Handle the copied file
-                handleDroppedFile(destinationURL)
-            } catch {
-                print("Error copying file: \\(error)")
-                showError(title: "File Error", message: "Could not copy the selected PDF file: \\(error.localizedDescription)")
-            }
-            
-        case .failure(let error):
-            print("File picker error: \\(error)")
-            showError(title: "Error Selecting PDF", message: error.localizedDescription)
+        do {
+            guard let url = try result.get().first else { return }
+            handleDroppedFile(url)
+        } catch {
+            errorAlert = ErrorAlert(
+                title: "Error",
+                message: "Failed to load PDF: \(error.localizedDescription)"
+            )
         }
     }
     
     private func handleDroppedFile(_ url: URL) {
-        print("Attempting to load PDF from URL: \\(url)")
-        print("File exists at path: \\(FileManager.default.fileExists(atPath: url.path))")
-        print("File size: \\((try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? UInt64) ?? 0) bytes")
-        
-        // Try to read the file data first
-        do {
-            let data = try Data(contentsOf: url)
-            print("Successfully read \\(data.count) bytes of data")
-            
-            // Try creating PDFDocument from data first
-            if let document = PDFDocument(data: data) {
-                print("Successfully created PDF document from data")
-                processPDFDocument(document)
-                return
-            } else {
-                print("Failed to create PDF document from data, trying URL method...")
-            }
-        } catch {
-            print("Error reading file data: \\(error)")
-        }
-        
-        // Fallback to URL method
-        if let document = PDFDocument(url: url) {
-            print("Successfully created PDF document from URL")
-            processPDFDocument(document)
-        } else {
-            print("Failed to create PDF document from URL")
-            showError(title: "Invalid PDF", message: "Could not open the file as a PDF. Please make sure it's a valid PDF document.")
-        }
-    }
-    
-    private func processPDFDocument(_ document: PDFDocument) {
-        guard document.pageCount > 0 else {
-            print("PDF document has no pages")
-            showError(title: "Empty PDF", message: "The PDF document appears to be empty.")
+        guard let document = PDFDocument(url: url) else {
+            errorAlert = ErrorAlert(
+                title: "Error",
+                message: "Failed to load PDF. Please make sure it's a valid PDF file."
+            )
             return
         }
         
-        print("Successfully loaded PDF with \\(document.pageCount) pages")
-        
         selectedPDF = document
-        isProcessing = true
-        summary = ""
-        flashcards = []
-        
-        // Process the PDF
-        Task {
-            do {
-                print("Starting PDF text extraction")
-                let text = try await processor.extractText(from: document)
-                print("Extracted \\(text.count) characters of text")
-                
-                print("Generating summary")
-                summary = try await llm.generateSummary(text: text)
-                
-                print("Generating flashcards")
-                flashcards = try await llm.generateFlashcards(text: text)
-                
-                print("PDF processing completed successfully")
-            } catch {
-                print("Error during PDF processing: \\(error)")
-                showError(title: "Processing Error", message: "Failed to process the PDF: \\(error.localizedDescription)")
-            }
-            isProcessing = false
-        }
-    }
-    
-    private func showError(title: String, message: String) {
-        errorAlert = ErrorAlert(title: title, message: message)
-    }
-    
-    private func clearCurrentPDF() {
-        withAnimation {
-            selectedPDF = nil
-            summary = ""
-            flashcards = []
-            question = ""
-        }
+        // TODO: Process the PDF content
     }
 }
 
