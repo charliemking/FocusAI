@@ -17,6 +17,7 @@ public struct PDFView: View {
     @State private var isDragging = false
     @State private var isProcessing = false
     @State private var errorAlert: ErrorAlert?
+    @State private var isShowingOptions = false
     
     private let processor = DefaultDocumentProcessor()
     private let llm = StubLLMInterface()
@@ -28,26 +29,39 @@ public struct PDFView: View {
             // Left side - PDF viewer
             VStack {
                 if let pdf = selectedPDF {
-                    PDFKitView(document: pdf)
-                        .overlay(
-                            VStack {
-                                Button("Change PDF") {
+                    ZStack(alignment: .topTrailing) {
+                        PDFKitView(document: pdf)
+                        
+                        HStack(spacing: 8) {
+                            Menu {
+                                Button("Replace PDF") {
                                     isShowingPicker = true
                                 }
-                                .padding(8)
-                                .background(.ultraThinMaterial)
-                                .cornerRadius(8)
                                 
-                                if isProcessing {
-                                    Text("Processing PDF...")
-                                        .padding(8)
-                                        .background(.ultraThinMaterial)
-                                        .cornerRadius(8)
+                                Button("Clear PDF", role: .destructive) {
+                                    clearCurrentPDF()
                                 }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .font(.system(size: 16, weight: .medium))
                             }
-                            .padding(),
-                            alignment: .topTrailing
-                        )
+                            .menuStyle(.borderlessButton)
+                            .menuIndicator(.hidden)
+                            .frame(width: 30, height: 30)
+                            .contentShape(Circle())
+                            .padding(8)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                            
+                            if isProcessing {
+                                Text("Processing...")
+                                    .padding(8)
+                                    .background(.ultraThinMaterial)
+                                    .cornerRadius(8)
+                            }
+                        }
+                        .padding()
+                    }
                 } else {
                     dropZoneView
                 }
@@ -265,6 +279,15 @@ public struct PDFView: View {
     
     private func showError(title: String, message: String) {
         errorAlert = ErrorAlert(title: title, message: message)
+    }
+    
+    private func clearCurrentPDF() {
+        withAnimation {
+            selectedPDF = nil
+            summary = ""
+            flashcards = []
+            question = ""
+        }
     }
 }
 
