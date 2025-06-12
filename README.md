@@ -1,6 +1,6 @@
 # FocusAI
 
-A privacy-first study assistant built with SwiftUI for macOS. FocusAI helps you analyze documents, generate summaries, create flashcards, and answer questions about your study material.
+A privacy-first study assistant built with SwiftUI for macOS. FocusAI helps you analyze documents, generate summaries, create flashcards, and answer questions about your study material, no Wifi required.
 
 ## Features
 
@@ -12,7 +12,7 @@ A privacy-first study assistant built with SwiftUI for macOS. FocusAI helps you 
   - Automatic summarization
   - Flashcard generation
   - Interactive Q&A system
-- Privacy-focused design
+- Privacy-focused design with offline capabilities
 - Native macOS experience with SwiftUI
 
 ## Project Structure
