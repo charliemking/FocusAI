@@ -10,96 +10,119 @@ public struct TextView: View {
     public init() {}
     
     public var body: some View {
-        HSplitView {
-            // Left side - Text input
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Enter Text")
-                    .font(.headline)
-                    .foregroundColor(Theme.primaryBlue)
-                
-                TextEditor(text: $inputText)
-                    .font(.body)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(8)
-                    .background(Color.white)
-                    .cornerRadius(8)
-                
-                Button("Process") {
-                    // TODO: Implement text processing
-                    isProcessing = true
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.primaryBlue)
-                .disabled(inputText.isEmpty || isProcessing)
-            }
-            .padding()
-            .frame(minWidth: 400)
-            .background(Theme.backgroundWhite)
-            
-            // Right side - Summary and Q&A
+        GeometryReader { geometry in
             VStack(spacing: 16) {
-                // Summary section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Summary")
-                        .font(.headline)
-                        .foregroundColor(Theme.primaryBlue)
-                    
-                    if isProcessing {
-                        processingView
-                    } else {
-                        Text(summary.isEmpty ? "Summary will appear here" : summary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .customGroupBox()
-                
-                // Flashcards section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Flashcards")
-                        .font(.headline)
-                        .foregroundColor(Theme.primaryBlue)
-                    
-                    if isProcessing {
-                        processingView
-                    } else if flashcards.isEmpty {
-                        Text("Flashcards will appear here")
-                            .foregroundColor(.gray)
-                    } else {
-                        List(flashcards) { card in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Q: \(card.question)")
-                                    .font(.headline)
-                                Text("A: \(card.answer)")
-                                    .font(.body)
-                            }
-                            .padding(.vertical, 4)
+                // Top row with Summary and Flashcards side by side
+                HStack(spacing: 16) {
+                    // Summary section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Summary")
+                            .font(.headline)
+                            .foregroundColor(Theme.primaryColor)
+                        if isProcessing {
+                            processingView
+                        } else {
+                            Text(summary.isEmpty ? "Summary will appear here" : summary)
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .listStyle(.plain)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 16)
+                    .background(Theme.backgroundWhite)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    
+                    // Flashcards section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Flashcards")
+                            .font(.headline)
+                            .foregroundColor(Theme.primaryColor)
+                        
+                        if isProcessing {
+                            processingView
+                        } else if flashcards.isEmpty {
+                            Text("Flashcards will appear here")
+                                .foregroundColor(.gray)
+                        } else {
+                            ScrollView {
+                                VStack(spacing: 8) {
+                                    ForEach(flashcards) { card in
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Q: \(card.question)")
+                                                .font(.headline)
+                                            Text("A: \(card.answer)")
+                                                .font(.body)
+                                        }
+                                        .padding(.vertical, 4)
+                                        Divider()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 16)
+                    .background(Theme.backgroundWhite)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
-                .customGroupBox()
+                .padding(.horizontal, 16)
+                .frame(height: (geometry.size.height - 48) / 2)
                 
-                // Q&A section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Ask a Question")
-                        .font(.headline)
-                        .foregroundColor(Theme.primaryBlue)
-                    
-                    TextField("Type your question...", text: $question)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Button("Ask") {
-                        // TODO: Implement question handling
+                // Bottom row with text input and Q&A side by side
+                HStack(spacing: 16) {
+                    // Left side - Text input
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextEditor(text: $inputText)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                            )
+                        
+                        Button("Process") {
+                            // TODO: Implement text processing
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Theme.primaryColor)
+                        .disabled(inputText.isEmpty || isProcessing)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.primaryBlue)
-                    .disabled(inputText.isEmpty || isProcessing)
+                    .padding()
+                    .frame(width: (geometry.size.width - 48) * 0.25)
+                    .background(Theme.backgroundWhite)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    
+                    // Right side - Q&A
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Ask a Question")
+                            .font(.headline)
+                            .foregroundColor(Theme.primaryColor)
+                        
+                        TextField("Type your question...", text: $question)
+                            .textFieldStyle(.roundedBorder)
+                        
+                        Button("Ask") {
+                            // TODO: Implement question handling
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Theme.primaryColor)
+                        .disabled(inputText.isEmpty || isProcessing)
+                        
+                        Spacer()
+                    }
+                    .padding()
+                    .frame(width: (geometry.size.width - 48) * 0.75)
+                    .background(Theme.backgroundWhite)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
-                .customGroupBox()
+                .padding(.horizontal, 16)
+                .frame(height: (geometry.size.height - 48) / 2)
             }
-            .frame(minWidth: 300)
-            .padding()
-            .background(Theme.backgroundWhite)
+            .padding(.vertical, 16)
+            .background(Color(white: 0.95))
         }
     }
     
@@ -108,7 +131,7 @@ public struct TextView: View {
             ProgressView()
                 .scaleEffect(0.8)
                 .controlSize(.small)
-                .tint(Theme.primaryBlue)
+                .tint(Theme.primaryColor)
             Text("Processing...")
                 .font(.caption)
                 .foregroundColor(.secondary)

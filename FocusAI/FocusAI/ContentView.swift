@@ -1,5 +1,5 @@
 import SwiftUI
-import PDFKit
+import AppKit
 
 struct ContentView: View {
     @State private var selectedTab = 0
@@ -10,40 +10,88 @@ struct ContentView: View {
             VStack(spacing: 4) {
                 Text("FocusAI")
                     .font(Theme.headerStyle)
-                    .foregroundColor(Theme.primaryBlue)
+                    .foregroundColor(Theme.primaryColor)
                 Text("A Privacy-First Study Assistant by Charlie King")
                     .font(Theme.subtitleStyle)
                     .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(
-                Color.white
-                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-            )
+            .background(Color.white)
             
-            // Tab View
-            TabView(selection: $selectedTab) {
-                PDFView()
-                    .tabItem {
-                        Label("PDF", systemImage: "doc.fill")
+            // Tab Bar
+            HStack(spacing: 24) {
+                ForEach(0..<3) { index in
+                    Button(action: { selectedTab = index }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: index == 0 ? "doc.fill" :
+                                             index == 1 ? "text.justify" : "link")
+                            Text(index == 0 ? "PDF" :
+                                index == 1 ? "Text" : "URL")
+                        }
+                        .foregroundColor(selectedTab == index ? Theme.primaryColor : .gray)
                     }
-                    .tag(0)
-                
-                TextView()
-                    .tabItem {
-                        Label("Text", systemImage: "text.justify")
-                    }
-                    .tag(1)
-                
-                URLView()
-                    .tabItem {
-                        Label("URL", systemImage: "link")
-                    }
-                    .tag(2)
+                    .buttonStyle(.plain)
+                }
             }
-            .tabViewStyle(.automatic)
+            .padding(.top, 16)
+            .frame(maxWidth: .infinity)
+            .background(Theme.backgroundColor)
+            
+            // Content
+            Group {
+                if selectedTab == 0 {
+                    PDFView()
+                } else if selectedTab == 1 {
+                    TextView()
+                } else {
+                    URLView()
+                }
+            }
         }
-        .frame(minWidth: 800, minHeight: 600)
+        .frame(minWidth: 1200, minHeight: 800)
+    }
+}
+
+struct CustomTabView<Content: View>: NSViewRepresentable {
+    @Binding var selection: Int
+    let content: Content
+    
+    init(selection: Binding<Int>, @ViewBuilder content: () -> Content) {
+        self._selection = selection
+        self.content = content()
+    }
+    
+    func makeNSView(context: Context) -> NSTabView {
+        let tabView = NSTabView()
+        tabView.tabViewType = .topTabsBezelBorder
+        tabView.tabViewBorderType = .none
+        tabView.tabPosition = .none // Hide the tab bar
+        tabView.delegate = context.coordinator
+        return tabView
+    }
+    
+    func updateNSView(_ tabView: NSTabView, context: Context) {
+        if tabView.selectedTabViewItem?.identifier as? Int != selection {
+            tabView.selectTabViewItem(at: selection)
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, NSTabViewDelegate {
+        var parent: CustomTabView
+        
+        init(_ parent: CustomTabView) {
+            self.parent = parent
+        }
+        
+        func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
+            if let index = tabViewItem?.identifier as? Int {
+                parent.selection = index
+            }
+        }
     }
 } 

@@ -21,117 +21,145 @@ public struct PDFView: View {
     public init() {}
     
     public var body: some View {
-        HSplitView {
-            // Left side - PDF viewer
-            VStack {
-                if let pdf = selectedPDF {
-                    ZStack(alignment: .topTrailing) {
-                        PDFKitView(document: pdf)
+        GeometryReader { geometry in
+            VStack(spacing: 16) {
+                // Top row with Summary and Flashcards side by side
+                HStack(spacing: 16) {
+                    // Summary section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Summary")
+                            .font(.headline)
+                            .foregroundColor(Theme.primaryColor)
+                        if isProcessing {
+                            processingView
+                        } else {
+                            Text(summary.isEmpty ? "Summary will appear here" : summary)
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 16)
+                    .background(Theme.backgroundWhite)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    
+                    // Flashcards section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Flashcards")
+                            .font(.headline)
+                            .foregroundColor(Theme.primaryColor)
                         
-                        HStack(spacing: 8) {
-                            Menu {
-                                Button("Replace PDF") {
-                                    isShowingPicker = true
+                        if isProcessing {
+                            processingView
+                        } else if flashcards.isEmpty {
+                            Text("Flashcards will appear here")
+                                .foregroundColor(.gray)
+                        } else {
+                            ScrollView {
+                                VStack(spacing: 8) {
+                                    ForEach(flashcards) { card in
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Q: \(card.question)")
+                                                .font(.headline)
+                                            Text("A: \(card.answer)")
+                                                .font(.body)
+                                        }
+                                        .padding(.vertical, 4)
+                                        Divider()
+                                    }
                                 }
-                                
-                                Button("Clear PDF", role: .destructive) {
-                                    clearCurrentPDF()
-                                }
-                            } label: {
-                                Image(systemName: "ellipsis.circle")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(Theme.primaryBlue)
                             }
-                            .menuStyle(.borderlessButton)
-                            .menuIndicator(.hidden)
-                            .frame(width: 30, height: 30)
-                            .contentShape(Circle())
-                            .padding(8)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
-                            
-                            if isProcessing {
-                                Text("Processing...")
-                                    .font(.caption)
-                                    .foregroundColor(Theme.primaryBlue)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 16)
+                    .background(Theme.backgroundWhite)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .padding(.horizontal, 16)
+                .frame(height: (geometry.size.height - 48) / 2)
+                
+                // Bottom row with PDF viewer and Q&A side by side
+                HStack(spacing: 16) {
+                    // Left side - PDF viewer
+                    VStack {
+                        if let pdf = selectedPDF {
+                            ZStack(alignment: .topTrailing) {
+                                PDFKitView(document: pdf)
+                                
+                                HStack(spacing: 8) {
+                                    Menu {
+                                        Button("Replace PDF") {
+                                            isShowingPicker = true
+                                        }
+                                        
+                                        Button("Clear PDF", role: .destructive) {
+                                            clearCurrentPDF()
+                                        }
+                                    } label: {
+                                        Image(systemName: "ellipsis.circle")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(Theme.primaryColor)
+                                    }
+                                    .menuStyle(.borderlessButton)
+                                    .menuIndicator(.hidden)
+                                    .frame(width: 30, height: 30)
+                                    .contentShape(Circle())
                                     .padding(8)
                                     .background(.ultraThinMaterial)
-                                    .cornerRadius(8)
+                                    .clipShape(Circle())
+                                    
+                                    if isProcessing {
+                                        Text("Processing...")
+                                            .font(.caption)
+                                            .foregroundColor(Theme.primaryColor)
+                                            .padding(8)
+                                            .background(.ultraThinMaterial)
+                                            .cornerRadius(8)
+                                    }
+                                }
+                                .padding()
                             }
+                        } else {
+                            dropZoneView
                         }
-                        .padding()
                     }
-                } else {
-                    dropZoneView
-                }
-            }
-            .frame(minWidth: 400)
-            .background(Theme.backgroundWhite)
-            
-            // Right side - Summary and Q&A
-            VStack(spacing: 16) {
-                // Summary section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Summary")
-                        .font(.headline)
-                        .foregroundColor(Theme.primaryBlue)
+                    .frame(width: (geometry.size.width - 48) * 0.25)
+                    .background(Theme.backgroundWhite)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                     
-                    if isProcessing {
-                        processingView
-                    } else {
-                        Text(summary.isEmpty ? "Summary will appear here" : summary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .customGroupBox()
-                
-                // Flashcards section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Flashcards")
-                        .font(.headline)
-                        .foregroundColor(Theme.primaryBlue)
-                    
-                    if isProcessing {
-                        processingView
-                    } else if flashcards.isEmpty {
-                        Text("Flashcards will appear here")
-                            .foregroundColor(.gray)
-                    } else {
-                        List(flashcards) { card in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Q: \(card.question)")
-                                    .font(.headline)
-                                Text("A: \(card.answer)")
-                                    .font(.body)
-                            }
-                            .padding(.vertical, 4)
+                    // Right side - Q&A
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Ask a Question")
+                            .font(.headline)
+                            .foregroundColor(Theme.primaryColor)
+                        
+                        TextField("Type your question...", text: $question)
+                            .textFieldStyle(.roundedBorder)
+                        
+                        Button("Ask") {
+                            // TODO: Implement question handling
                         }
-                        .listStyle(.plain)
+                        .buttonStyle(.borderedProminent)
+                        .tint(Theme.primaryColor)
+                        .disabled(selectedPDF == nil || isProcessing)
+                        
+                        Spacer()
                     }
+                    .padding()
+                    .frame(width: (geometry.size.width - 48) * 0.75)
+                    .background(Theme.backgroundWhite)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
-                .customGroupBox()
-                
-                // Q&A section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Ask a Question")
-                        .font(.headline)
-                        .foregroundColor(Theme.primaryBlue)
-                    
-                    TextField("Type your question...", text: $question)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Button("Ask") {
-                        // TODO: Implement question handling
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.primaryBlue)
-                    .disabled(selectedPDF == nil || isProcessing)
-                }
-                .customGroupBox()
+                .padding(.horizontal, 16)
+                .frame(height: (geometry.size.height - 48) / 2)
             }
-            .frame(minWidth: 300)
-            .padding()
-            .background(Theme.backgroundWhite)
+            .padding(.vertical, 16)
+            .background(Color(white: 0.95))
         }
         .fileImporter(
             isPresented: $isShowingPicker,
@@ -154,7 +182,7 @@ public struct PDFView: View {
             ProgressView()
                 .scaleEffect(0.8)
                 .controlSize(.small)
-                .tint(Theme.primaryBlue)
+                .tint(Theme.primaryColor)
             Text("Processing...")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -167,9 +195,9 @@ public struct PDFView: View {
         VStack {
             Image(systemName: "doc.fill")
                 .font(.system(size: 48))
-                .foregroundColor(isDragging ? Theme.primaryBlue : .gray)
+                .foregroundColor(isDragging ? Theme.primaryColor : .gray)
             Text("Drop PDF here or click to select")
-                .foregroundColor(isDragging ? Theme.primaryBlue : .gray)
+                .foregroundColor(isDragging ? Theme.primaryColor : .gray)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
@@ -177,10 +205,10 @@ public struct PDFView: View {
                 .strokeBorder(
                     style: StrokeStyle(lineWidth: 2, dash: [10])
                 )
-                .foregroundColor(isDragging ? Theme.primaryBlue : .gray)
+                .foregroundColor(isDragging ? Theme.primaryColor : .gray)
                 .padding()
         )
-        .background(Theme.lightBlue.opacity(isDragging ? 0.3 : 0))
+        .background(Theme.lightAccent.opacity(isDragging ? 0.3 : 0))
         .animation(.easeInOut(duration: 0.2), value: isDragging)
         .onTapGesture {
             isShowingPicker = true
