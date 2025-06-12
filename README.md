@@ -27,13 +27,6 @@ open FocusAI.xcodeproj
 
 The app is built using SwiftUI and follows Apple's Human Interface Guidelines. The UI is designed to be intuitive and responsive, with a clean and modern aesthetic.
 
-### Key Components
-
-- **PDFView**: Handles PDF document upload, display, and processing
-- **TextView**: Provides direct text input and processing capabilities
-- **URLView**: Manages web content retrieval and analysis
-- **Theme**: Centralizes app styling with an emerald green color scheme
-
 ## Author
 
 Charlie King 
