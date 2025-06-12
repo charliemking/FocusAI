@@ -14,11 +14,12 @@ struct FocusAIApp: App {
         // Customize window appearance
         NSWindow.allowsAutomaticWindowTabbing = false
         
-        // Remove default toolbar spacing
+        // Configure window appearance
         if let window = NSApplication.shared.windows.first {
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
             window.toolbar?.isVisible = false
+            window.styleMask.remove(.titled)
             window.setContentSize(NSSize(width: 1200, height: 800))
         }
     }

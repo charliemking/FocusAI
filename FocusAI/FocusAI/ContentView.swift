@@ -16,7 +16,8 @@ struct ContentView: View {
                     .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
             .background(Color.white)
             
             // Tab Bar

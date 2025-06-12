@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield shape -->
+  <path d="M256 40
+           L460 40
+           C460 40 480 40 480 60
+           L480 220
+           C480 380 256 472 256 472
+           C256 472 32 380 32 220
+           L32 60
+           C32 40 52 40 52 40
+           L256 40Z" 
+        fill="#00A858"/>
+  <!-- Text as paths -->
+  <path d="M137 230v-60h30c16.5 0 25 8.5 25 20 0 8.5-5 15-12.5 17.5 8.5 2 15 9 15 18.5 0 12.5-8.5 21-25 21h-32.5zm15-35h12.5c7.5 0 12.5-4 12.5-10s-5-10-12.5-10h-12.5v20zm0 25h15c7.5 0 12.5-4 12.5-10s-5-10-12.5-10h-15v20z" fill="white"/>
+  <path d="M237 230l-25-60h16.5l16.5 42.5 16.5-42.5h16.5l-25 60h-16z" fill="white"/>
+  <path d="M297 230v-60h45v12.5h-30v11.25h27.5v12.5h-27.5v11.25h30v12.5h-45z" fill="white"/>
+  <path d="M357 230v-60h15v47.5h30v12.5h-45z" fill="white"/>
+  <path d="M417 230l-25-60h16.5l16.5 42.5 16.5-42.5h16.5l-25 60h-16z" fill="white"/>
+  <path d="M467 230v-60h15v60h-15z" fill="white"/>
+  <path d="M497 230v-60h15l20 35 20-35h15v60h-15v-35l-20 35-20-35v35h-15z" fill="white"/>
+</svg> 

@@ -166,7 +166,15 @@ public struct PDFView: View {
             allowedContentTypes: [.pdf],
             allowsMultipleSelection: false
         ) { result in
-            handleSelectedFile(result)
+            do {
+                guard let url = try result.get().first else { return }
+                handleDroppedFile(url)
+            } catch {
+                errorAlert = ErrorAlert(
+                    title: "Error",
+                    message: "Failed to load PDF: \(error.localizedDescription)"
+                )
+            }
         }
         .alert(item: $errorAlert) { alert in
             Alert(
@@ -242,16 +250,53 @@ public struct PDFView: View {
     }
     
     private func handleDroppedFile(_ url: URL) {
-        guard let document = PDFDocument(url: url) else {
-            errorAlert = ErrorAlert(
-                title: "Error",
-                message: "Failed to load PDF. Please make sure it's a valid PDF file."
-            )
-            return
+        // Start accessing the security-scoped resource if needed
+        let shouldStopAccessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if shouldStopAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
         }
         
-        selectedPDF = document
-        // TODO: Process the PDF content
+        do {
+            // Try to read the file data first
+            let data = try Data(contentsOf: url)
+            
+            // Create PDF document from data instead of URL
+            guard let document = PDFDocument(data: data) else {
+                errorAlert = ErrorAlert(
+                    title: "Error",
+                    message: "Failed to load PDF. Please make sure it's a valid PDF file."
+                )
+                return
+            }
+            
+            // Set the document immediately so the user can work with it
+            selectedPDF = document
+            
+            // Save a copy in the background
+            DispatchQueue.global(qos: .background).async {
+                do {
+                    let appSupportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                    let pdfDirectory = appSupportDirectory.appendingPathComponent("FocusAI/PDFs", isDirectory: true)
+                    
+                    try FileManager.default.createDirectory(at: pdfDirectory, withIntermediateDirectories: true)
+                    let permanentUrl = pdfDirectory.appendingPathComponent(url.lastPathComponent)
+                    
+                    // Save the data directly instead of copying the file
+                    try data.write(to: permanentUrl)
+                } catch {
+                    // Just log the error since the PDF is already loaded and working
+                    print("Failed to save PDF copy: \(error.localizedDescription)")
+                }
+            }
+            
+        } catch {
+            errorAlert = ErrorAlert(
+                title: "Error",
+                message: "Error handling file: \(error.localizedDescription)"
+            )
+        }
     }
 }
 
