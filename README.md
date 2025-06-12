@@ -1,41 +1,7 @@
 # FocusAI
 
-A privacy-first study assistant built with SwiftUI for macOS. FocusAI helps you analyze documents, generate summaries, create flashcards, and answer questions about your study material, no Wifi required.
-
+m building FocusAI, a privacy-first macOS study assistant written in Swift. It summarizes PDFs, generates flashcards, and answers questions—all locally on-device using Core ML. Designed for students like me, it offers offline functionality, user privacy, and a distraction-free experience. This is an ongoing personal project inspired by my interest in usable, ethical AI.
 ## Features
-
-- Multiple input methods:
-  - PDF document upload and analysis
-  - Text input for direct content processing
-  - URL input for web content analysis
-- AI-powered tools:
-  - Automatic summarization
-  - Flashcard generation
-  - Interactive Q&A system
-- Privacy-focused design with offline capabilities
-- Native macOS experience with SwiftUI
-
-## Project Structure
-
-```
-FocusAI/
-├── FocusAI/
-│   ├── FocusAIApp.swift          # App entry point and window configuration
-│   ├── ContentView.swift         # Main view with tab navigation
-│   ├── Theme.swift              # App-wide styling and colors
-│   │
-│   ├── Views/
-│   │   ├── PDFView.swift        # PDF document handling and display
-│   │   ├── TextView.swift       # Direct text input processing
-│   │   └── URLView.swift        # Web content processing
-│   │
-│   ├── Models/
-│   │   └── Flashcard.swift      # Flashcard data model
-│   │
-│   └── Assets.xcassets/         # App icons and images
-│
-└── README.md                    # Project documentation
-```
 
 ## Requirements
 
@@ -68,7 +34,6 @@ The app is built using SwiftUI and follows Apple's Human Interface Guidelines. T
 - **TextView**: Provides direct text input and processing capabilities
 - **URLView**: Manages web content retrieval and analysis
 - **Theme**: Centralizes app styling with an emerald green color scheme
-
 
 ## Author
 
