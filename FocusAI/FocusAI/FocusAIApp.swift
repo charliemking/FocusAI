@@ -10,7 +10,7 @@ import AppKit
 
 @main
 struct FocusAIApp: App {
-    @StateObject private var serviceManager = ServiceManager(useStubServices: true)
+    @StateObject private var serviceManager = ServiceManager(useStubServices: false)
     
     init() {
         // Customize window appearance

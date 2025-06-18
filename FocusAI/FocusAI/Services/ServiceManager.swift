@@ -37,7 +37,14 @@ public class ServiceManager: ObservableObject {
     // MARK: - Initialization Methods
     
     public func initialize() async {
-        guard !isInitialized else { return }
+        guard !isInitialized else { 
+            print("⚠️ ServiceManager already initialized")
+            NSLog("⚠️ ServiceManager already initialized")
+            return 
+        }
+        
+        print("🚀 Starting ServiceManager initialization...")
+        NSLog("🚀 Starting ServiceManager initialization...")
         
         await MainActor.run {
             isProcessing = true
@@ -45,6 +52,8 @@ public class ServiceManager: ObservableObject {
         }
         
         do {
+            print("📞 Calling llmInterface.loadModel()...")
+            NSLog("📞 Calling llmInterface.loadModel()...")
             try await llmInterface.loadModel()
             
             await MainActor.run {
@@ -53,6 +62,7 @@ public class ServiceManager: ObservableObject {
             }
             
             print("✅ ServiceManager initialized successfully")
+            NSLog("✅ ServiceManager initialized successfully")
         } catch {
             await MainActor.run {
                 isProcessing = false
@@ -60,6 +70,7 @@ public class ServiceManager: ObservableObject {
             }
             
             print("❌ ServiceManager initialization failed: \(error.localizedDescription)")
+            NSLog("❌ ServiceManager initialization failed: \(error.localizedDescription)")
         }
     }
     
