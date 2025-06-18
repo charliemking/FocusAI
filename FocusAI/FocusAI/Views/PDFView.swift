@@ -9,6 +9,7 @@ struct ErrorAlert: Identifiable {
 }
 
 public struct PDFView: View {
+    @EnvironmentObject private var serviceManager: ServiceManager
     @State private var selectedPDF: PDFDocument?
     @State private var isDragging = false
     @State private var isShowingPicker = false
@@ -16,6 +17,7 @@ public struct PDFView: View {
     @State private var summary = ""
     @State private var flashcards: [Flashcard] = []
     @State private var question = ""
+    @State private var answer = ""
     @State private var errorAlert: ErrorAlert?
     
     public init() {}
@@ -34,7 +36,7 @@ public struct PDFView: View {
                             processingView
                         } else {
                             Text(summary.isEmpty ? "Summary will appear here" : summary)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color(.darkGray))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
@@ -55,7 +57,7 @@ public struct PDFView: View {
                             processingView
                         } else if flashcards.isEmpty {
                             Text("Flashcards will appear here")
-                                .foregroundColor(.gray)
+                                .foregroundColor(Color(.darkGray))
                         } else {
                             ScrollView {
                                 VStack(spacing: 8) {
@@ -63,8 +65,10 @@ public struct PDFView: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text("Q: \(card.question)")
                                                 .font(.headline)
+                                                .foregroundColor(Color(.darkGray))
                                             Text("A: \(card.answer)")
                                                 .font(.body)
+                                                .foregroundColor(Color(.darkGray))
                                         }
                                         .padding(.vertical, 4)
                                         Divider()
@@ -139,16 +143,36 @@ public struct PDFView: View {
                             .foregroundColor(Theme.primaryColor)
                         
                         TextField("Type your question...", text: $question)
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.plain)
+                            .foregroundColor(Color(.darkGray))
+                            .padding(8)
+                            .background(Color.white)
+                            .cornerRadius(6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                            )
+                            .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                         
                         Button("Ask") {
-                            // TODO: Implement question handling
+                            Task {
+                                await askQuestion()
+                            }
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.primaryColor)
                         .disabled(selectedPDF == nil || isProcessing)
                         
-                        Spacer()
+                        if !answer.isEmpty {
+                            ScrollView {
+                                Text(answer)
+                                    .foregroundColor(Color(.darkGray))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 8)
+                            }
+                        } else {
+                            Spacer()
+                        }
                     }
                     .padding()
                     .frame(width: (geometry.size.width - 48) * 0.75)
@@ -235,6 +259,7 @@ public struct PDFView: View {
         summary = ""
         flashcards = []
         question = ""
+        answer = ""
     }
     
     private func handleSelectedFile(_ result: Result<[URL], Error>) {
@@ -274,6 +299,11 @@ public struct PDFView: View {
             // Set the document immediately so the user can work with it
             selectedPDF = document
             
+            // Start processing the PDF automatically
+            Task {
+                await processPDF(document)
+            }
+            
             // Save a copy in the background
             DispatchQueue.global(qos: .background).async {
                 do {
@@ -297,6 +327,61 @@ public struct PDFView: View {
                 message: "Error handling file: \(error.localizedDescription)"
             )
         }
+    }
+    
+    private func processPDF(_ pdf: PDFDocument) async {
+        isProcessing = true
+        
+        do {
+            summary = try await serviceManager.generateSummary(from: extractTextFromPDF(pdf))
+            flashcards = try await serviceManager.generateFlashcards(from: extractTextFromPDF(pdf))
+        } catch {
+            errorAlert = ErrorAlert(
+                title: "Processing Error",
+                message: "Error processing PDF: \(error.localizedDescription)"
+            )
+            print("❌ PDF processing error: \(error)")
+        }
+        
+        isProcessing = false
+    }
+    
+    private func askQuestion() async {
+        guard !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        
+        guard let pdf = selectedPDF else {
+            errorAlert = ErrorAlert(
+                title: "No PDF",
+                message: "Please load a PDF first"
+            )
+            return
+        }
+        
+        do {
+            let pdfText = extractTextFromPDF(pdf)
+            let result = try await serviceManager.askQuestion(question, context: pdfText)
+            answer = result
+            print("🤖 Answer: \(result)")
+        } catch {
+            errorAlert = ErrorAlert(
+                title: "Question Error", 
+                message: "Error asking question: \(error.localizedDescription)"
+            )
+            print("❌ Question error: \(error)")
+        }
+    }
+    
+    private func extractTextFromPDF(_ pdf: PDFDocument) -> String {
+        var text = ""
+        for pageIndex in 0..<pdf.pageCount {
+            if let page = pdf.page(at: pageIndex) {
+                text += page.string ?? ""
+                text += "\n"
+            }
+        }
+        return text
     }
 }
 
@@ -380,4 +465,5 @@ struct PDFKitView: NSViewRepresentable {
 
 #Preview {
     PDFView()
+        .environmentObject(ServiceManager(useStubServices: true))
 } 

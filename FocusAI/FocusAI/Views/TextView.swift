@@ -1,11 +1,14 @@
 import SwiftUI
 
 public struct TextView: View {
+    @EnvironmentObject private var serviceManager: ServiceManager
     @State private var inputText = ""
     @State private var isProcessing = false
     @State private var summary = ""
     @State private var flashcards: [Flashcard] = []
     @State private var question = ""
+    @State private var answer = ""
+    @State private var errorMessage: String?
     
     public init() {}
     
@@ -23,7 +26,7 @@ public struct TextView: View {
                             processingView
                         } else {
                             Text(summary.isEmpty ? "Summary will appear here" : summary)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color(.darkGray))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
@@ -44,7 +47,7 @@ public struct TextView: View {
                             processingView
                         } else if flashcards.isEmpty {
                             Text("Flashcards will appear here")
-                                .foregroundColor(.gray)
+                                .foregroundColor(Color(.darkGray))
                         } else {
                             ScrollView {
                                 VStack(spacing: 8) {
@@ -52,8 +55,10 @@ public struct TextView: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text("Q: \(card.question)")
                                                 .font(.headline)
+                                                .foregroundColor(Color(.darkGray))
                                             Text("A: \(card.answer)")
                                                 .font(.body)
+                                                .foregroundColor(Color(.darkGray))
                                         }
                                         .padding(.vertical, 4)
                                         Divider()
@@ -78,13 +83,23 @@ public struct TextView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         TextEditor(text: $inputText)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .scrollContentBackground(.hidden)
+                            .background(Color.white)
+                            .foregroundColor(Color(.darkGray))
+                            .accentColor(Color(.darkGray))
+                            .font(.system(size: 14, weight: .regular))
+                            .cornerRadius(6)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
                             )
+                            .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+                            .padding(4)
                         
                         Button("Process") {
-                            // TODO: Implement text processing
+                            Task {
+                                await processText()
+                            }
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.primaryColor)
@@ -102,16 +117,36 @@ public struct TextView: View {
                             .foregroundColor(Theme.primaryColor)
                         
                         TextField("Type your question...", text: $question)
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.plain)
+                            .foregroundColor(Color(.darkGray))
+                            .padding(8)
+                            .background(Color.white)
+                            .cornerRadius(6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                            )
+                            .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                         
                         Button("Ask") {
-                            // TODO: Implement question handling
+                            Task {
+                                await askQuestion()
+                            }
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.primaryColor)
                         .disabled(inputText.isEmpty || isProcessing)
                         
-                        Spacer()
+                        if !answer.isEmpty {
+                            ScrollView {
+                                Text(answer)
+                                    .foregroundColor(Color(.darkGray))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 8)
+                            }
+                        } else {
+                            Spacer()
+                        }
                     }
                     .padding()
                     .frame(width: (geometry.size.width - 48) * 0.75)
@@ -139,8 +174,49 @@ public struct TextView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .padding()
     }
+    
+    private func processText() async {
+        guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            errorMessage = "Please enter some text to process"
+            return
+        }
+        
+        isProcessing = true
+        errorMessage = nil
+        
+        do {
+            summary = try await serviceManager.generateSummary(from: inputText)
+            flashcards = try await serviceManager.generateFlashcards(from: inputText)
+        } catch {
+            errorMessage = "Error processing text: \(error.localizedDescription)"
+            print("❌ Text processing error: \(error)")
+        }
+        
+        isProcessing = false
+    }
+    
+    private func askQuestion() async {
+        guard !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        
+        guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            errorMessage = "Please enter some text first"
+            return
+        }
+        
+        do {
+            let result = try await serviceManager.askQuestion(question, context: inputText)
+            answer = result
+            print("🤖 Answer: \(result)")
+        } catch {
+            errorMessage = "Error asking question: \(error.localizedDescription)"
+            print("❌ Question error: \(error)")
+        }
+    }
 }
 
 #Preview {
     TextView()
+        .environmentObject(ServiceManager(useStubServices: true))
 } 

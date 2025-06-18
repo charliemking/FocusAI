@@ -13,7 +13,7 @@ struct ContentView: View {
                     .foregroundColor(Theme.primaryColor)
                 Text("A Privacy-First Study Assistant by Charlie King")
                     .font(Theme.subtitleStyle)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(.darkGray))
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 8)

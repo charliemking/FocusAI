@@ -10,6 +10,8 @@ import AppKit
 
 @main
 struct FocusAIApp: App {
+    @StateObject private var serviceManager = ServiceManager(useStubServices: true)
+    
     init() {
         // Customize window appearance
         NSWindow.allowsAutomaticWindowTabbing = false
@@ -27,7 +29,11 @@ struct FocusAIApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(serviceManager)
                 .frame(minWidth: 1200, minHeight: 800)
+                .task {
+                    await serviceManager.initialize()
+                }
         }
         .windowStyle(.hiddenTitleBar)
     }
