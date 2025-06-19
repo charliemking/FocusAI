@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2A0F8CFF2DFA397D006BC3C0 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0F8CFE2DFA397D006BC3C0 /* Theme.swift */; };
+		2A130C662E048356006DEC97 /* DiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A130C652E048356006DEC97 /* DiagnosticsView.swift */; };
 		2A343FC42DFA29B600C19D10 /* FocusAIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FC32DFA29B600C19D10 /* FocusAIApp.swift */; };
 		2A343FC62DFA29B600C19D10 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FC52DFA29B600C19D10 /* ContentView.swift */; };
 		2A343FC82DFA29B700C19D10 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2A343FC72DFA29B700C19D10 /* Assets.xcassets */; };
@@ -20,10 +21,10 @@
 		2A343FDA2DFA2A0000C19D10 /* FlashcardGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FD92DFA2A0000C19D10 /* FlashcardGenerator.swift */; };
 		2A343FDC2DFA2A0000C19D10 /* LLMInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FDB2DFA2A0000C19D10 /* LLMInterface.swift */; };
 		2A343FDF2DFA2A0000C19D10 /* ServiceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FE32DFA2A0000C19D10 /* ServiceManager.swift */; };
-		2A5FAF452E03E3D100DCAAEA /* EmbeddedLLMInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A5FAF442E03E3D100DCAAEA /* EmbeddedLLMInterface.swift */; };
 		2A5FAF412E03E38100DCAAEA /* llama-server in Resources */ = {isa = PBXBuildFile; fileRef = 2A5FAF3B2E03E38100DCAAEA /* llama-server */; };
 		2A5FAF422E03E38100DCAAEA /* phi-3-mini-4k-instruct.gguf in Resources */ = {isa = PBXBuildFile; fileRef = 2A5FAF3D2E03E38100DCAAEA /* phi-3-mini-4k-instruct.gguf */; };
 		2A5FAF432E03E38100DCAAEA /* LICENSES.md in Resources */ = {isa = PBXBuildFile; fileRef = 2A5FAF3F2E03E38100DCAAEA /* LICENSES.md */; };
+		2A5FAF452E03E3D100DCAAEA /* EmbeddedLLMInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A5FAF442E03E3D100DCAAEA /* EmbeddedLLMInterface.swift */; };
 		2A5FAF4E2E03E38200DCAAEA /* libggml.dylib in Resources */ = {isa = PBXBuildFile; fileRef = 2A5FAF462E03E38200DCAAEA /* libggml.dylib */; };
 		2A5FAF4F2E03E38200DCAAEA /* libmtmd.dylib in Resources */ = {isa = PBXBuildFile; fileRef = 2A5FAF472E03E38200DCAAEA /* libmtmd.dylib */; };
 		2A5FAF502E03E38200DCAAEA /* libggml-base.dylib in Resources */ = {isa = PBXBuildFile; fileRef = 2A5FAF482E03E38200DCAAEA /* libggml-base.dylib */; };
@@ -31,11 +32,11 @@
 		2A5FAF522E03E38200DCAAEA /* libllama.dylib in Resources */ = {isa = PBXBuildFile; fileRef = 2A5FAF4A2E03E38200DCAAEA /* libllama.dylib */; };
 		2A5FAF532E03E38200DCAAEA /* libggml-cpu.dylib in Resources */ = {isa = PBXBuildFile; fileRef = 2A5FAF4B2E03E38200DCAAEA /* libggml-cpu.dylib */; };
 		2A5FAF542E03E38200DCAAEA /* libggml-metal.dylib in Resources */ = {isa = PBXBuildFile; fileRef = 2A5FAF4C2E03E38200DCAAEA /* libggml-metal.dylib */; };
-		2A5FAF452E03E3D100DCAAEA /* EmbeddedLLMInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A5FAF442E03E3D100DCAAEA /* EmbeddedLLMInterface.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		2A0F8CFE2DFA397D006BC3C0 /* Theme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		2A130C652E048356006DEC97 /* DiagnosticsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DiagnosticsView.swift; sourceTree = "<group>"; };
 		2A343FC02DFA29B600C19D10 /* FocusAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FocusAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A343FC32DFA29B600C19D10 /* FocusAIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusAIApp.swift; sourceTree = "<group>"; };
 		2A343FC52DFA29B600C19D10 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -51,9 +52,9 @@
 		2A343FDB2DFA2A0000C19D10 /* LLMInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMInterface.swift; sourceTree = "<group>"; };
 		2A343FE32DFA2A0000C19D10 /* ServiceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceManager.swift; sourceTree = "<group>"; };
 		2A5FAF3B2E03E38100DCAAEA /* llama-server */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = "llama-server"; sourceTree = "<group>"; };
-		2A5FAF442E03E3D100DCAAEA /* EmbeddedLLMInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddedLLMInterface.swift; sourceTree = "<group>"; };
 		2A5FAF3D2E03E38100DCAAEA /* phi-3-mini-4k-instruct.gguf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "phi-3-mini-4k-instruct.gguf"; sourceTree = "<group>"; };
 		2A5FAF3F2E03E38100DCAAEA /* LICENSES.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = LICENSES.md; sourceTree = "<group>"; };
+		2A5FAF442E03E3D100DCAAEA /* EmbeddedLLMInterface.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EmbeddedLLMInterface.swift; sourceTree = "<group>"; };
 		2A5FAF462E03E38200DCAAEA /* libggml.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libggml.dylib; sourceTree = "<group>"; };
 		2A5FAF472E03E38200DCAAEA /* libmtmd.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmtmd.dylib; sourceTree = "<group>"; };
 		2A5FAF482E03E38200DCAAEA /* libggml-base.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = "libggml-base.dylib"; sourceTree = "<group>"; };
@@ -61,7 +62,6 @@
 		2A5FAF4A2E03E38200DCAAEA /* libllama.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libllama.dylib; sourceTree = "<group>"; };
 		2A5FAF4B2E03E38200DCAAEA /* libggml-cpu.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = "libggml-cpu.dylib"; sourceTree = "<group>"; };
 		2A5FAF4C2E03E38200DCAAEA /* libggml-metal.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = "libggml-metal.dylib"; sourceTree = "<group>"; };
-		2A5FAF442E03E3D100DCAAEA /* EmbeddedLLMInterface.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EmbeddedLLMInterface.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -119,6 +119,7 @@
 		2A343FE02DFA2A1000C19D10 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				2A130C652E048356006DEC97 /* DiagnosticsView.swift */,
 				2A343FCF2DFA2A0000C19D10 /* PDFView.swift */,
 				2A343FD12DFA2A0000C19D10 /* TextView.swift */,
 				2A343FD32DFA2A0000C19D10 /* URLView.swift */,
@@ -162,6 +163,17 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		2A5FAF402E03E38100DCAAEA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				2A5FAF3C2E03E38100DCAAEA /* Binaries */,
+				2A5FAF4D2E03E38200DCAAEA /* Libraries */,
+				2A5FAF3E2E03E38100DCAAEA /* Models */,
+				2A5FAF3F2E03E38100DCAAEA /* LICENSES.md */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		2A5FAF4D2E03E38200DCAAEA /* Libraries */ = {
 			isa = PBXGroup;
 			children = (
@@ -174,17 +186,6 @@
 				2A5FAF4C2E03E38200DCAAEA /* libggml-metal.dylib */,
 			);
 			path = Libraries;
-			sourceTree = "<group>";
-		};
-		2A5FAF402E03E38100DCAAEA /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				2A5FAF3C2E03E38100DCAAEA /* Binaries */,
-				2A5FAF4D2E03E38200DCAAEA /* Libraries */,
-				2A5FAF3E2E03E38100DCAAEA /* Models */,
-				2A5FAF3F2E03E38100DCAAEA /* LICENSES.md */,
-			);
-			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -268,6 +269,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2A343FC62DFA29B600C19D10 /* ContentView.swift in Sources */,
+				2A130C662E048356006DEC97 /* DiagnosticsView.swift in Sources */,
 				2A343FC42DFA29B600C19D10 /* FocusAIApp.swift in Sources */,
 				2A343FD02DFA2A0000C19D10 /* PDFView.swift in Sources */,
 				2A343FD22DFA2A0000C19D10 /* TextView.swift in Sources */,

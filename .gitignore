@@ -120,3 +120,8 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
+# Large model files and binaries
+FocusAI/FocusAI/Resources/Models/*.gguf
+FocusAI/FocusAI/Resources/Binaries/
+FocusAI/FocusAI/Resources/Libraries/
+llama.cpp/
