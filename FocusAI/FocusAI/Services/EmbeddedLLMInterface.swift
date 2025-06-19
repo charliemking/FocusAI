@@ -166,7 +166,7 @@ public class EmbeddedLLMInterface: LLMInterface {
             "--host", "127.0.0.1",
             "--ctx-size", "4096",
             "--threads", "\(ProcessInfo.processInfo.processorCount)",
-            "--n-gpu-layers", "32", // Enable Metal GPU acceleration
+            "--n-gpu-layers", "8", // Enable Metal GPU acceleration
             "--mlock", // Keep model in memory for faster access
             "--cont-batching", // Enable continuous batching for efficiency
             "--flash-attn", // Enable flash attention for speed
@@ -320,7 +320,7 @@ public class EmbeddedLLMInterface: LLMInterface {
     // MARK: - Prompt Building
     
     private func buildSummaryPrompt(text: String) -> String {
-        let truncatedText = String(text.prefix(3000))
+        let truncatedText = String(text.prefix(12000))
         return """
         <|system|>You are a helpful assistant that summarizes documents. Create one comprehensive summary that covers the main points and key information.</|>
         <|user|>Please provide a single summary of this text:
@@ -331,7 +331,7 @@ public class EmbeddedLLMInterface: LLMInterface {
     }
     
     private func buildQuestionAnswerPrompt(question: String, context: String) -> String {
-        let truncatedContext = String(context.prefix(2500))
+        let truncatedContext = String(context.prefix(10000))
         return """
         <|system|>You are a helpful study assistant. Answer questions based on the provided context. Be specific and helpful.</|>
         <|user|>Context:
@@ -343,7 +343,7 @@ public class EmbeddedLLMInterface: LLMInterface {
     }
     
     private func buildFlashcardPrompt(text: String) -> String {
-        let truncatedText = String(text.prefix(2000))
+        let truncatedText = String(text.prefix(8000))
         return """
         <|system|>Create flashcards from the given text. Format each flashcard as:
         Q: [Question]
@@ -383,26 +383,7 @@ public class EmbeddedLLMInterface: LLMInterface {
             }
         }
         
-        // For summaries, if we detect multiple summaries, take only the first one
-        if type == .summary {
-            // Split on common separators that indicate a second summary
-            let separators = [
-                "Here is an example summary:",
-                "Here's an example:",
-                "Example summary:",
-                "\n\nHere is",
-                "\n\nExample:",
-                "\n\nSummary:",
-            ]
-            
-            for separator in separators {
-                if let range = cleaned.range(of: separator, options: [.caseInsensitive]) {
-                    cleaned = String(cleaned[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
-                    break
-                }
-            }
-        }
-        
+
         return cleaned
     }
     
