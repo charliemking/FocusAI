@@ -21,6 +21,7 @@
 		2A343FDA2DFA2A0000C19D10 /* FlashcardGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FD92DFA2A0000C19D10 /* FlashcardGenerator.swift */; };
 		2A343FDC2DFA2A0000C19D10 /* LLMInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FDB2DFA2A0000C19D10 /* LLMInterface.swift */; };
 		2A343FDD2DFA2A0000C19D10 /* CoreMLLLMInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FDE2DFA2A0000C19D10 /* CoreMLLLMInterface.swift */; };
+		2A343FE62DFA2A0000C19D10 /* OllamaLLMInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FE72DFA2A0000C19D10 /* OllamaLLMInterface.swift */; };
 		2A343FDF2DFA2A0000C19D10 /* ServiceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FE32DFA2A0000C19D10 /* ServiceManager.swift */; };
 /* End PBXBuildFile section */
 
@@ -41,6 +42,7 @@
 		2A343FD92DFA2A0000C19D10 /* FlashcardGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardGenerator.swift; sourceTree = "<group>"; };
 		2A343FDB2DFA2A0000C19D10 /* LLMInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMInterface.swift; sourceTree = "<group>"; };
 		2A343FDE2DFA2A0000C19D10 /* CoreMLLLMInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMLLLMInterface.swift; sourceTree = "<group>"; };
+		2A343FE72DFA2A0000C19D10 /* OllamaLLMInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaLLMInterface.swift; sourceTree = "<group>"; };
 		2A343FE32DFA2A0000C19D10 /* ServiceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -121,6 +123,7 @@
 				2A343FD92DFA2A0000C19D10 /* FlashcardGenerator.swift */,
 				2A343FDB2DFA2A0000C19D10 /* LLMInterface.swift */,
 				2A343FDE2DFA2A0000C19D10 /* CoreMLLLMInterface.swift */,
+				2A343FE72DFA2A0000C19D10 /* OllamaLLMInterface.swift */,
 				2A343FE32DFA2A0000C19D10 /* ServiceManager.swift */,
 			);
 			path = Services;
@@ -208,6 +211,7 @@
 				2A343FDA2DFA2A0000C19D10 /* FlashcardGenerator.swift in Sources */,
 				2A343FDC2DFA2A0000C19D10 /* LLMInterface.swift in Sources */,
 				2A343FDD2DFA2A0000C19D10 /* CoreMLLLMInterface.swift in Sources */,
+				2A343FE62DFA2A0000C19D10 /* OllamaLLMInterface.swift in Sources */,
 				2A343FDF2DFA2A0000C19D10 /* ServiceManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

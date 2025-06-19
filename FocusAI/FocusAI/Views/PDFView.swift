@@ -34,10 +34,16 @@ public struct PDFView: View {
                             .foregroundColor(Theme.primaryColor)
                         if isProcessing {
                             processingView
-                        } else {
-                            Text(summary.isEmpty ? "Summary will appear here" : summary)
+                        } else if summary.isEmpty {
+                            Text("Summary will appear here")
                                 .foregroundColor(Color(.darkGray))
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            ScrollView {
+                                Text(summary)
+                                    .foregroundColor(Color(.darkGray))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -332,9 +338,25 @@ public struct PDFView: View {
     private func processPDF(_ pdf: PDFDocument) async {
         isProcessing = true
         
+        // Wait for services to be initialized
+        while !serviceManager.isInitialized && serviceManager.lastError == nil {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        }
+        
+        // Check if initialization failed
+        if let error = serviceManager.lastError {
+            errorAlert = ErrorAlert(
+                title: "Service Error",
+                message: "Failed to initialize services: \(error.localizedDescription)"
+            )
+            isProcessing = false
+            return
+        }
+        
         do {
-            summary = try await serviceManager.llmInterface.generateSummary(text: extractTextFromPDF(pdf))
-            flashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: extractTextFromPDF(pdf), count: 5, difficulty: .intermediate)
+            let pdfText = extractTextFromPDF(pdf)
+            summary = try await serviceManager.llmInterface.generateSummary(text: pdfText)
+            flashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: pdfText, count: 5, difficulty: .intermediate)
         } catch {
             errorAlert = ErrorAlert(
                 title: "Processing Error",
@@ -355,6 +377,20 @@ public struct PDFView: View {
             errorAlert = ErrorAlert(
                 title: "No PDF",
                 message: "Please load a PDF first"
+            )
+            return
+        }
+        
+        // Wait for services to be initialized
+        while !serviceManager.isInitialized && serviceManager.lastError == nil {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        }
+        
+        // Check if initialization failed
+        if let error = serviceManager.lastError {
+            errorAlert = ErrorAlert(
+                title: "Service Error",
+                message: "Failed to initialize services: \(error.localizedDescription)"
             )
             return
         }

@@ -24,10 +24,16 @@ public struct TextView: View {
                             .foregroundColor(Theme.primaryColor)
                         if isProcessing {
                             processingView
-                        } else {
-                            Text(summary.isEmpty ? "Summary will appear here" : summary)
+                        } else if summary.isEmpty {
+                            Text("Summary will appear here")
                                 .foregroundColor(Color(.darkGray))
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            ScrollView {
+                                Text(summary)
+                                    .foregroundColor(Color(.darkGray))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -184,6 +190,18 @@ public struct TextView: View {
         isProcessing = true
         errorMessage = nil
         
+        // Wait for services to be initialized
+        while !serviceManager.isInitialized && serviceManager.lastError == nil {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        }
+        
+        // Check if initialization failed
+        if let error = serviceManager.lastError {
+            errorMessage = "Failed to initialize services: \(error.localizedDescription)"
+            isProcessing = false
+            return
+        }
+        
         do {
             summary = try await serviceManager.llmInterface.generateSummary(text: inputText)
             flashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: inputText, count: 5, difficulty: .intermediate)
@@ -202,6 +220,17 @@ public struct TextView: View {
         
         guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             errorMessage = "Please enter some text first"
+            return
+        }
+        
+        // Wait for services to be initialized
+        while !serviceManager.isInitialized && serviceManager.lastError == nil {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        }
+        
+        // Check if initialization failed
+        if let error = serviceManager.lastError {
+            errorMessage = "Failed to initialize services: \(error.localizedDescription)"
             return
         }
         

@@ -24,10 +24,16 @@ public struct URLView: View {
                             .foregroundColor(Theme.primaryColor)
                         if isProcessing {
                             processingView
-                        } else {
-                            Text(summary.isEmpty ? "Summary will appear here" : summary)
+                        } else if summary.isEmpty {
+                            Text("Summary will appear here")
                                 .foregroundColor(Color(.darkGray))
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            ScrollView {
+                                Text(summary)
+                                    .foregroundColor(Color(.darkGray))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -175,6 +181,18 @@ public struct URLView: View {
         isProcessing = true
         errorMessage = nil
         
+        // Wait for services to be initialized
+        while !serviceManager.isInitialized && serviceManager.lastError == nil {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        }
+        
+        // Check if initialization failed
+        if let error = serviceManager.lastError {
+            errorMessage = "Failed to initialize services: \(error.localizedDescription)"
+            isProcessing = false
+            return
+        }
+        
         do {
             let document = try await serviceManager.processDocument(url: url)
             summary = try await serviceManager.llmInterface.generateSummary(text: document.content)
@@ -193,6 +211,17 @@ public struct URLView: View {
         
         guard !summary.isEmpty else {
             errorMessage = "Please process a URL first"
+            return
+        }
+        
+        // Wait for services to be initialized
+        while !serviceManager.isInitialized && serviceManager.lastError == nil {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        }
+        
+        // Check if initialization failed
+        if let error = serviceManager.lastError {
+            errorMessage = "Failed to initialize services: \(error.localizedDescription)"
             return
         }
         

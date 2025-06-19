@@ -26,9 +26,9 @@ public class ServiceManager: ObservableObject {
             self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
             self.modelStatus = "Stub mode"
         } else {
-            // Use real CoreML implementation with improved backend
-            print("🔧 Using enhanced CoreML services with BPE tokenizer and sampling")
-            self.llmInterface = CoreMLLLMInterface()
+            // Use Ollama implementation with phi3 model
+            print("🔧 Using Ollama services with phi3 model")
+            self.llmInterface = OllamaLLMInterface()
             self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
             self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
             self.modelStatus = "Loading..."
