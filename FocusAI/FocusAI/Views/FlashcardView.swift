@@ -1,0 +1,294 @@
+import SwiftUI
+
+public struct FlashcardView: View {
+    let flashcards: [Flashcard]
+    @State private var currentIndex = 0
+    @State private var isShowingAnswer = false
+    @State private var flipRotation = 0.0
+    
+    public init(flashcards: [Flashcard]) {
+        self.flashcards = flashcards
+    }
+    
+    public var body: some View {
+        VStack(spacing: 20) {
+            if flashcards.isEmpty {
+                Text("No flashcards available")
+                    .font(Theme.bodyStyle)
+                    .foregroundColor(Color(.darkGray))
+            } else {
+                // Progress indicator
+                HStack {
+                    Text("Card \(currentIndex + 1) of \(flashcards.count)")
+                        .font(Theme.subtitleStyle)
+                        .foregroundColor(Theme.primaryColor)
+                    
+                    Spacer()
+                    
+                    // Progress bar
+                    ProgressView(value: Double(currentIndex + 1), total: Double(flashcards.count))
+                        .progressViewStyle(LinearProgressViewStyle(tint: Theme.primaryColor))
+                        .frame(width: 120)
+                }
+                .padding(.horizontal)
+                
+                // Main flashcard
+                flashcardBody
+                
+                // Navigation controls
+                navigationControls
+                
+                // Action buttons
+                actionButtons
+            }
+        }
+        .padding()
+    }
+    
+    private var flashcardBody: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Theme.backgroundWhite)
+                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Theme.primaryColor.opacity(0.2), lineWidth: 1)
+                )
+            
+            VStack(spacing: 16) {
+                // Card type indicator
+                HStack {
+                    Text(isShowingAnswer ? "ANSWER" : "QUESTION")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(isShowingAnswer ? .green : Theme.primaryColor)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill((isShowingAnswer ? .green : Theme.primaryColor).opacity(0.1))
+                        )
+                    
+                    Spacer()
+                    
+                    // Flip hint
+                    Text("Tap to flip")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                
+                Spacer()
+                
+                // Card content
+                VStack(spacing: 20) {
+                    if isShowingAnswer {
+                        Text(currentFlashcard.answer)
+                            .font(Theme.bodyStyle)
+                            .foregroundColor(Color(.darkGray))
+                            .multilineTextAlignment(.center)
+                            .transition(.opacity)
+                    } else {
+                        Text(currentFlashcard.question)
+                            .font(Theme.titleStyle)
+                            .foregroundColor(Theme.primaryColor)
+                            .multilineTextAlignment(.center)
+                            .transition(.opacity)
+                    }
+                }
+                
+                Spacer()
+                
+                // Tags (if any)
+                if !currentFlashcard.tags.isEmpty {
+                    HStack {
+                        ForEach(currentFlashcard.tags.prefix(3), id: \.self) { tag in
+                            Text(tag)
+                                .font(.caption)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(Theme.lightAccent)
+                                .foregroundColor(Theme.primaryColor)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+            .padding(24)
+        }
+        .frame(minHeight: 300, maxHeight: 400)
+        .rotation3DEffect(
+            .degrees(flipRotation),
+            axis: (x: 0, y: 1, z: 0)
+        )
+        .onTapGesture {
+            flipCard()
+        }
+        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: flipRotation)
+        .animation(.easeInOut(duration: 0.3), value: isShowingAnswer)
+    }
+    
+    private var navigationControls: some View {
+        HStack(spacing: 20) {
+            // Previous button
+            Button(action: previousCard) {
+                HStack {
+                    Image(systemName: "chevron.left")
+                    Text("Previous")
+                }
+                .font(Theme.subtitleStyle)
+                .foregroundColor(currentIndex > 0 ? Theme.primaryColor : .gray)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(currentIndex > 0 ? Theme.primaryColor : .gray, lineWidth: 1)
+                )
+            }
+            .disabled(currentIndex <= 0)
+            
+            Spacer()
+            
+            // Reset button
+            Button(action: resetToQuestion) {
+                Image(systemName: "arrow.clockwise")
+                    .font(Theme.subtitleStyle)
+                    .foregroundColor(Theme.primaryColor)
+                    .padding(8)
+                    .background(
+                        Circle()
+                            .stroke(Theme.primaryColor, lineWidth: 1)
+                    )
+            }
+            
+            Spacer()
+            
+            // Next button
+            Button(action: nextCard) {
+                HStack {
+                    Text("Next")
+                    Image(systemName: "chevron.right")
+                }
+                .font(Theme.subtitleStyle)
+                .foregroundColor(currentIndex < flashcards.count - 1 ? Theme.primaryColor : .gray)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(currentIndex < flashcards.count - 1 ? Theme.primaryColor : .gray, lineWidth: 1)
+                )
+            }
+            .disabled(currentIndex >= flashcards.count - 1)
+        }
+        .padding(.horizontal)
+    }
+    
+    private var actionButtons: some View {
+        HStack(spacing: 16) {
+            // Shuffle button
+            Button(action: shuffleCards) {
+                HStack {
+                    Image(systemName: "shuffle")
+                    Text("Shuffle")
+                }
+                .font(Theme.subtitleStyle)
+                .foregroundColor(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(Theme.primaryColor)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            
+            // Restart button
+            Button(action: restartDeck) {
+                HStack {
+                    Image(systemName: "arrow.counterclockwise")
+                    Text("Restart")
+                }
+                .font(Theme.subtitleStyle)
+                .foregroundColor(Theme.primaryColor)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Theme.primaryColor, lineWidth: 1)
+                )
+            }
+        }
+    }
+    
+    private var currentFlashcard: Flashcard {
+        flashcards[currentIndex]
+    }
+    
+    // MARK: - Actions
+    
+    private func flipCard() {
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            flipRotation += 180
+        }
+        
+        // Change content at the midpoint of the flip
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                isShowingAnswer.toggle()
+            }
+        }
+    }
+    
+    private func nextCard() {
+        guard currentIndex < flashcards.count - 1 else { return }
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            currentIndex += 1
+            isShowingAnswer = false
+            flipRotation = 0
+        }
+    }
+    
+    private func previousCard() {
+        guard currentIndex > 0 else { return }
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            currentIndex -= 1
+            isShowingAnswer = false
+            flipRotation = 0
+        }
+    }
+    
+    private func resetToQuestion() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isShowingAnswer = false
+            flipRotation = 0
+        }
+    }
+    
+    private func shuffleCards() {
+        // Note: This would require making flashcards mutable
+        // For now, just reset to first card
+        withAnimation(.easeInOut(duration: 0.3)) {
+            currentIndex = 0
+            isShowingAnswer = false
+            flipRotation = 0
+        }
+    }
+    
+    private func restartDeck() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            currentIndex = 0
+            isShowingAnswer = false
+            flipRotation = 0
+        }
+    }
+}
+
+// MARK: - Preview
+struct FlashcardView_Previews: PreviewProvider {
+    static var previews: some View {
+        FlashcardView(flashcards: [
+            Flashcard(question: "What is photosynthesis?", answer: "The process by which plants convert sunlight into chemical energy using chlorophyll.", tags: ["biology", "plants"]),
+            Flashcard(question: "What is the chemical equation for photosynthesis?", answer: "6CO2 + 6H2O + light energy → C6H12O6 + 6O2", tags: ["chemistry", "equations"]),
+            Flashcard(question: "Where does photosynthesis occur?", answer: "In the chloroplasts of plant cells, specifically in the thylakoid membranes.", tags: ["biology", "cells"])
+        ])
+        .environmentObject(ServiceManager())
+    }
+} 

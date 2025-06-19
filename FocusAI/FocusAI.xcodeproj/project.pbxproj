@@ -19,6 +19,7 @@
 		2A343FD62DFA2A0000C19D10 /* Flashcard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FD52DFA2A0000C19D10 /* Flashcard.swift */; };
 		2A343FD82DFA2A0000C19D10 /* DocumentProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FD72DFA2A0000C19D10 /* DocumentProcessor.swift */; };
 		2A343FDA2DFA2A0000C19D10 /* FlashcardGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FD92DFA2A0000C19D10 /* FlashcardGenerator.swift */; };
+		2A343FE42DFA2A0000C19D10 /* FlashcardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FE52DFA2A0000C19D10 /* FlashcardView.swift */; };
 		2A343FDC2DFA2A0000C19D10 /* LLMInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FDB2DFA2A0000C19D10 /* LLMInterface.swift */; };
 		2A343FDF2DFA2A0000C19D10 /* ServiceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FE32DFA2A0000C19D10 /* ServiceManager.swift */; };
 		2A5FAF412E03E38100DCAAEA /* llama-server in Resources */ = {isa = PBXBuildFile; fileRef = 2A5FAF3B2E03E38100DCAAEA /* llama-server */; };
@@ -50,6 +51,7 @@
 		2A343FD72DFA2A0000C19D10 /* DocumentProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentProcessor.swift; sourceTree = "<group>"; };
 		2A343FD92DFA2A0000C19D10 /* FlashcardGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardGenerator.swift; sourceTree = "<group>"; };
 		2A343FDB2DFA2A0000C19D10 /* LLMInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMInterface.swift; sourceTree = "<group>"; };
+		2A343FE52DFA2A0000C19D10 /* FlashcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardView.swift; sourceTree = "<group>"; };
 		2A343FE32DFA2A0000C19D10 /* ServiceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceManager.swift; sourceTree = "<group>"; };
 		2A5FAF3B2E03E38100DCAAEA /* llama-server */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = "llama-server"; sourceTree = "<group>"; };
 		2A5FAF3D2E03E38100DCAAEA /* phi-3-mini-4k-instruct.gguf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "phi-3-mini-4k-instruct.gguf"; sourceTree = "<group>"; };
@@ -120,6 +122,7 @@
 			isa = PBXGroup;
 			children = (
 				2A130C652E048356006DEC97 /* DiagnosticsView.swift */,
+				2A343FE52DFA2A0000C19D10 /* FlashcardView.swift */,
 				2A343FCF2DFA2A0000C19D10 /* PDFView.swift */,
 				2A343FD12DFA2A0000C19D10 /* TextView.swift */,
 				2A343FD32DFA2A0000C19D10 /* URLView.swift */,
@@ -274,6 +277,7 @@
 				2A343FD02DFA2A0000C19D10 /* PDFView.swift in Sources */,
 				2A343FD22DFA2A0000C19D10 /* TextView.swift in Sources */,
 				2A343FD42DFA2A0000C19D10 /* URLView.swift in Sources */,
+				2A343FE42DFA2A0000C19D10 /* FlashcardView.swift in Sources */,
 				2A5FAF452E03E3D100DCAAEA /* EmbeddedLLMInterface.swift in Sources */,
 				2A343FD62DFA2A0000C19D10 /* Flashcard.swift in Sources */,
 				2A343FD82DFA2A0000C19D10 /* DocumentProcessor.swift in Sources */,

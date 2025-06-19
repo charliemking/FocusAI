@@ -66,26 +66,11 @@ public struct PDFView: View {
                         if isProcessing {
                             processingView
                         } else if flashcards.isEmpty {
-                            Text("Flashcards will appear here")
+                            Text("Interactive flashcards will appear here")
                                 .font(Theme.bodyStyle)
                                 .foregroundColor(Color(.darkGray))
                         } else {
-                            ScrollView {
-                                VStack(spacing: 8) {
-                                    ForEach(flashcards) { card in
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text("Q: \(card.question)")
-                                                .font(Theme.subtitleStyle)
-                                                .foregroundColor(Color(.darkGray))
-                                            Text("A: \(card.answer)")
-                                                .font(Theme.bodyStyle)
-                                                .foregroundColor(Color(.darkGray))
-                                        }
-                                        .padding(.vertical, 4)
-                                        Divider()
-                                    }
-                                }
-                            }
+                            FlashcardView(flashcards: flashcards)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
