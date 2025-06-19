@@ -157,14 +157,17 @@ public class EmbeddedLLMInterface: LLMInterface {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: llamaCppServerPath)
         
-        // Configure server arguments
+        // Configure server arguments for optimal performance
         process.arguments = [
             "--model", modelPath,
             "--port", "\(self.serverPort)",
             "--host", "127.0.0.1",
             "--ctx-size", "4096",
             "--threads", "\(ProcessInfo.processInfo.processorCount)",
-            "--n-gpu-layers", "0", // CPU-only for App Store compatibility
+            "--n-gpu-layers", "32", // Enable Metal GPU acceleration
+            "--mlock", // Keep model in memory for faster access
+            "--cont-batching", // Enable continuous batching for efficiency
+            "--flash-attn", // Enable flash attention for speed
             "--no-mmap", // Safer for sandboxed apps
             "--log-disable", // Disable detailed logging for production
         ]
@@ -179,7 +182,7 @@ public class EmbeddedLLMInterface: LLMInterface {
         
         // Set environment variables and library search path
         var environment = ProcessInfo.processInfo.environment
-        environment["GGML_METAL_DISABLE"] = "1" // Disable Metal for App Store compatibility
+        // Metal GPU acceleration is now enabled for better performance
         
         // Add library search path for bundled dylibs
         if let resourcePath = Bundle.main.resourcePath {
@@ -247,7 +250,7 @@ public class EmbeddedLLMInterface: LLMInterface {
         isLoaded = false
     }
     
-    private func waitForServerReady(timeout: TimeInterval = 30.0) async throws {
+    private func waitForServerReady(timeout: TimeInterval = 60.0) async throws {
         let deadline = Date().addingTimeInterval(timeout)
         
         while Date() < deadline {
