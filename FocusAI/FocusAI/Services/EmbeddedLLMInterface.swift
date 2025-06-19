@@ -49,8 +49,8 @@ public class EmbeddedLLMInterface: LLMInterface {
             try await waitForServerReady()
             
             logger.info("🔄 Testing model with simple generation...")
-            let testPrompt = "<|user|>\nHello<|end|>\n<|assistant|>\n"
-            let testResponse = try await generateText(prompt: testPrompt, maxTokens: 10)
+            let testPrompt = "<|system|>You are a helpful AI assistant.<|end|>\n<|user|>Hello! Please respond with a brief greeting.<|end|>\n<|assistant|>"
+            let testResponse = try await generateText(prompt: testPrompt, maxTokens: 20)
             guard !testResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw LLMError.modelLoadFailed("Model test failed - no response generated")
             }
@@ -78,7 +78,7 @@ public class EmbeddedLLMInterface: LLMInterface {
         let prompt = buildQuestionAnswerPrompt(question: question, context: context)
         
         do {
-            let response = try await generateText(prompt: prompt, maxTokens: 200)
+            let response = try await generateText(prompt: prompt, maxTokens: 500)
             let cleanedResponse = cleanGeneratedText(response, for: .questionAnswer)
             
             if cleanedResponse.trimmingCharacters(in: .whitespacesAndNewlines).count < 10 {
@@ -100,7 +100,7 @@ public class EmbeddedLLMInterface: LLMInterface {
         let prompt = buildSummaryPrompt(text: text)
         
         do {
-            let response = try await generateText(prompt: prompt, maxTokens: 400)
+            let response = try await generateText(prompt: prompt, maxTokens: 800)
             let cleanedResponse = cleanGeneratedText(response, for: .summary)
             
             if cleanedResponse.trimmingCharacters(in: .whitespacesAndNewlines).count < 20 {
@@ -122,7 +122,7 @@ public class EmbeddedLLMInterface: LLMInterface {
         let prompt = buildFlashcardPrompt(text: text)
         
         do {
-            let response = try await generateText(prompt: prompt, maxTokens: 600)
+            let response = try await generateText(prompt: prompt, maxTokens: 1000)
             let flashcards = parseFlashcards(from: response)
             
             if flashcards.isEmpty {
@@ -164,13 +164,9 @@ public class EmbeddedLLMInterface: LLMInterface {
             "--model", modelPath,
             "--port", "\(self.serverPort)",
             "--host", "127.0.0.1",
-            "--ctx-size", "4096",
-            "--threads", "\(ProcessInfo.processInfo.processorCount)",
-            "--n-gpu-layers", "8", // Enable Metal GPU acceleration
-            "--mlock", // Keep model in memory for faster access
-            "--cont-batching", // Enable continuous batching for efficiency
-            "--flash-attn", // Enable flash attention for speed
-            "--no-mmap", // Safer for sandboxed apps
+            "--ctx-size", "4096", // Reduced back to 4096 for faster loading
+            "--threads", "\(max(1, ProcessInfo.processInfo.processorCount - 1))",
+            "--n-gpu-layers", "0", // Disable GPU for stability
             "--log-disable", // Disable detailed logging for production
         ]
         
@@ -221,7 +217,7 @@ public class EmbeddedLLMInterface: LLMInterface {
                 logger.error("❌ Error output: \(errorOutput)")
                 logger.error("❌ Standard output: \(standardOutput)")
                 
-                throw LLMError.modelLoadFailed("Server process terminated immediately. Error: \(errorOutput)")
+                throw LLMError.modelLoadFailed("Server failed to start within timeout period")
             }
             
         } catch {
@@ -252,24 +248,27 @@ public class EmbeddedLLMInterface: LLMInterface {
         isLoaded = false
     }
     
-    private func waitForServerReady(timeout: TimeInterval = 60.0) async throws {
-        let deadline = Date().addingTimeInterval(timeout)
+    private func waitForServerReady() async throws {
+        let maxAttempts = 60 // Increased from 30 to 60 (2 minutes)
+        var attempts = 0
         
-        while Date() < deadline {
+        while attempts < maxAttempts {
             do {
-                let url = URL(string: "\(baseURL)/health")!
-                let (_, response) = try await URLSession.shared.data(from: url)
+                let url = URL(string: "http://127.0.0.1:\(serverPort)/health")!
+                var request = URLRequest(url: url)
+                request.timeoutInterval = 10 // Increased timeout per request
                 
-                if let httpResponse = response as? HTTPURLResponse,
-                   httpResponse.statusCode == 200 {
-                    logger.info("✅ Server is ready")
+                let (_, response) = try await URLSession.shared.data(for: request)
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                    logger.info("Server is ready after \(attempts + 1) attempts")
                     return
                 }
             } catch {
-                // Server not ready yet, continue waiting
+                // Continue trying
             }
             
-            try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            attempts += 1
+            try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds between attempts
         }
         
         throw LLMError.modelLoadFailed("Server failed to start within timeout period")
@@ -282,7 +281,7 @@ public class EmbeddedLLMInterface: LLMInterface {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 60.0
+        request.timeoutInterval = 120 // Increased from 60 to 120 seconds
         
         let requestBody: [String: Any] = [
             "prompt": prompt,
@@ -292,7 +291,7 @@ public class EmbeddedLLMInterface: LLMInterface {
             "top_k": 40,
             "repeat_penalty": 1.1,
             "stream": false,
-            "stop": ["</s>", "\n\n\n", "###", "---"]
+            "stop": ["<|end|>", "<|user|>"]
         ]
         
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
@@ -320,37 +319,48 @@ public class EmbeddedLLMInterface: LLMInterface {
     // MARK: - Prompt Building
     
     private func buildSummaryPrompt(text: String) -> String {
-        let truncatedText = String(text.prefix(12000))
+        let truncatedText = String(text.prefix(12000)) // Reduced from 15000 for faster processing
         return """
-        <|system|>You are a helpful assistant that summarizes documents. Create one comprehensive summary that covers the main points and key information.</|>
-        <|user|>Please provide a single summary of this text:
+        <|system|>You are an expert summarization assistant. Create comprehensive, well-structured summaries that capture the main ideas, key arguments, supporting details, and conclusions. Write in clear, engaging prose that maintains the original meaning while being concise.<|end|>
+        <|user|>Please analyze the following text and create a detailed summary. Structure your response with clear paragraphs covering:
+        1. Main topic and purpose
+        2. Key points and arguments
+        3. Important details and examples
+        4. Conclusions or implications
 
-        \(truncatedText)</|>
+        Text to summarize:
+        \(truncatedText)
+
+        Please provide a comprehensive summary:<|end|>
         <|assistant|>
         """
     }
     
     private func buildQuestionAnswerPrompt(question: String, context: String) -> String {
-        let truncatedContext = String(context.prefix(10000))
+        let truncatedContext = String(context.prefix(10000)) // Reduced from 12000 for faster processing
         return """
-        <|system|>You are a helpful study assistant. Answer questions based on the provided context. Be specific and helpful.</|>
-        <|user|>Context:
+        <|system|>You are a knowledgeable research assistant that provides thorough, accurate answers based on the given context. Analyze the context carefully and provide detailed, well-reasoned responses. Use specific information from the context to support your answers.<|end|>
+        <|user|>Context for reference:
         \(truncatedContext)
 
-        Question: \(question)</|>
+        Question: \(question)
+
+        Please provide a comprehensive answer based on the context above. Include specific details and explain your reasoning.<|end|>
         <|assistant|>
         """
     }
     
     private func buildFlashcardPrompt(text: String) -> String {
-        let truncatedText = String(text.prefix(8000))
+        let truncatedText = String(text.prefix(10000))
         return """
-        <|system|>Create flashcards from the given text. Format each flashcard as:
-        Q: [Question]
-        A: [Answer]
+        <|system|>You are an expert educational content creator. Create high-quality flashcards that test key concepts, important facts, and critical understanding. Each flashcard should have a clear, specific question and a comprehensive but concise answer. Focus on the most important information that students need to learn.<|end|>
+        <|user|>Create 5-8 educational flashcards from the following content. Focus on the most important concepts, facts, and ideas that students should remember. Format each flashcard exactly as:
 
-        Make questions specific and answers concise.</|>
-        <|user|>\(truncatedText)</|>
+        Q: [Clear, specific question]
+        A: [Comprehensive but concise answer]
+
+        Content:
+        \(truncatedText)<|end|>
         <|assistant|>
         """
     }

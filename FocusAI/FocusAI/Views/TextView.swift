@@ -27,7 +27,7 @@ public struct TextView: View {
                             processingView
                         } else if summary.isEmpty {
                             Text("Summary will appear here")
-                                .font(Theme.subtitleStyle)
+                                .font(Theme.bodyStyle)
                                 .foregroundColor(Color(.darkGray))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
@@ -56,7 +56,7 @@ public struct TextView: View {
                             processingView
                         } else if flashcards.isEmpty {
                             Text("Flashcards will appear here")
-                                .font(Theme.subtitleStyle)
+                                .font(Theme.bodyStyle)
                                 .foregroundColor(Color(.darkGray))
                         } else {
                             ScrollView {
