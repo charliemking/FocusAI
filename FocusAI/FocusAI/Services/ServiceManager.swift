@@ -26,9 +26,9 @@ public class ServiceManager: ObservableObject {
             self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
             self.modelStatus = "Stub mode"
         } else {
-            // Use Ollama implementation with phi3 model
-            print("🔧 Using Ollama services with phi3 model")
-            self.llmInterface = OllamaLLMInterface()
+            // Use embedded Phi-3 implementation
+            print("🔧 Using embedded Phi-3 services")
+            self.llmInterface = EmbeddedLLMInterface()
             self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
             self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
             self.modelStatus = "Loading..."

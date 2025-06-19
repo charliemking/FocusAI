@@ -104,3 +104,19 @@ fastlane/test_output
 # IDE files
 .vscode/
 .idea/
+
+# Large binary files - too big for GitHub
+FocusAI/Resources/Models/*.gguf
+FocusAI/Resources/Libraries/*.dylib
+FocusAI/Resources/Binaries/llama-server
+
+# Build artifacts
+*.xcuserdata
+*.xcworkspace/xcuserdata
+*.xcodeproj/xcuserdata
+DerivedData/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
