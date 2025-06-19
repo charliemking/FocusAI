@@ -322,8 +322,8 @@ public class EmbeddedLLMInterface: LLMInterface {
     private func buildSummaryPrompt(text: String) -> String {
         let truncatedText = String(text.prefix(3000))
         return """
-        <|system|>You are a helpful assistant that creates clear, concise summaries of academic content. Focus on the main points, key concepts, and important details.</|>
-        <|user|>Summarize the following text in a clear and informative way:
+        <|system|>You are a helpful assistant that summarizes documents. Create one comprehensive summary that covers the main points and key information.</|>
+        <|user|>Please provide a single summary of this text:
 
         \(truncatedText)</|>
         <|assistant|>
@@ -371,6 +371,7 @@ public class EmbeddedLLMInterface: LLMInterface {
             "Here's a summary:",
             "Summary:",
             "Here is a summary:",
+            "Here is an example summary:",
             "Based on the provided context:",
             "Answer:",
             "Here's the answer:",
@@ -379,6 +380,26 @@ public class EmbeddedLLMInterface: LLMInterface {
         for prefix in prefixesToRemove {
             if cleaned.lowercased().hasPrefix(prefix.lowercased()) {
                 cleaned = String(cleaned.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        
+        // For summaries, if we detect multiple summaries, take only the first one
+        if type == .summary {
+            // Split on common separators that indicate a second summary
+            let separators = [
+                "Here is an example summary:",
+                "Here's an example:",
+                "Example summary:",
+                "\n\nHere is",
+                "\n\nExample:",
+                "\n\nSummary:",
+            ]
+            
+            for separator in separators {
+                if let range = cleaned.range(of: separator, options: [.caseInsensitive]) {
+                    cleaned = String(cleaned[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    break
+                }
             }
         }
         
