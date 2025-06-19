@@ -9,6 +9,7 @@ public struct TextView: View {
     @State private var question = ""
     @State private var answer = ""
     @State private var errorMessage: String?
+    @State private var rotationAngle = 0.0
     
     public init() {}
     
@@ -20,17 +21,19 @@ public struct TextView: View {
                     // Summary section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Summary")
-                            .font(.headline)
+                            .font(Theme.titleStyle)
                             .foregroundColor(Theme.primaryColor)
                         if isProcessing {
                             processingView
                         } else if summary.isEmpty {
                             Text("Summary will appear here")
+                                .font(Theme.subtitleStyle)
                                 .foregroundColor(Color(.darkGray))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
                             ScrollView {
                                 Text(summary)
+                                    .font(Theme.bodyStyle)
                                     .foregroundColor(Color(.darkGray))
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -46,13 +49,14 @@ public struct TextView: View {
                     // Flashcards section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Flashcards")
-                            .font(.headline)
+                            .font(Theme.titleStyle)
                             .foregroundColor(Theme.primaryColor)
                         
                         if isProcessing {
                             processingView
                         } else if flashcards.isEmpty {
                             Text("Flashcards will appear here")
+                                .font(Theme.subtitleStyle)
                                 .foregroundColor(Color(.darkGray))
                         } else {
                             ScrollView {
@@ -60,10 +64,10 @@ public struct TextView: View {
                                     ForEach(flashcards) { card in
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text("Q: \(card.question)")
-                                                .font(.headline)
+                                                .font(Theme.subtitleStyle)
                                                 .foregroundColor(Color(.darkGray))
                                             Text("A: \(card.answer)")
-                                                .font(.body)
+                                                .font(Theme.bodyStyle)
                                                 .foregroundColor(Color(.darkGray))
                                         }
                                         .padding(.vertical, 4)
@@ -93,7 +97,7 @@ public struct TextView: View {
                             .background(Color.white)
                             .foregroundColor(Color(.darkGray))
                             .accentColor(Color(.darkGray))
-                            .font(.system(size: 14, weight: .regular))
+                            .font(Theme.bodyStyle)
                             .cornerRadius(6)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6)
@@ -107,6 +111,7 @@ public struct TextView: View {
                                 await processText()
                             }
                         }
+                        .font(Theme.buttonStyle)
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.primaryColor)
                         .disabled(inputText.isEmpty || isProcessing)
@@ -119,11 +124,12 @@ public struct TextView: View {
                     // Right side - Q&A
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Ask a Question")
-                            .font(.headline)
+                            .font(Theme.titleStyle)
                             .foregroundColor(Theme.primaryColor)
                         
                         TextField("Type your question...", text: $question)
                             .textFieldStyle(.plain)
+                            .font(Theme.bodyStyle)
                             .foregroundColor(Color(.darkGray))
                             .padding(8)
                             .background(Color.white)
@@ -139,6 +145,7 @@ public struct TextView: View {
                                 await askQuestion()
                             }
                         }
+                        .font(Theme.buttonStyle)
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.primaryColor)
                         .disabled(inputText.isEmpty || isProcessing)
@@ -146,6 +153,7 @@ public struct TextView: View {
                         if !answer.isEmpty {
                             ScrollView {
                                 Text(answer)
+                                    .font(Theme.bodyStyle)
                                     .foregroundColor(Color(.darkGray))
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.top, 8)
@@ -168,17 +176,34 @@ public struct TextView: View {
     }
     
     private var processingView: some View {
-        VStack {
-            ProgressView()
-                .scaleEffect(0.8)
-                .controlSize(.small)
-                .tint(Theme.primaryColor)
-            Text("Processing...")
-                .font(.caption)
-                .foregroundColor(.secondary)
+        VStack(spacing: 16) { // 12 * 1.33 ≈ 16
+            // Custom spinning indicator (33% bigger)
+            Circle()
+                .trim(from: 0, to: 0.8)
+                .stroke(Color(.darkGray), lineWidth: 5) // 4 * 1.33 ≈ 5
+                .frame(width: 53, height: 53) // 40 * 1.33 ≈ 53
+                .rotationEffect(.degrees(rotationAngle))
+                .onAppear {
+                    withAnimation(Animation.linear(duration: 1).repeatForever(autoreverses: false)) {
+                        rotationAngle = 360
+                    }
+                }
+            
+            VStack(spacing: 5) { // 4 * 1.33 ≈ 5
+                Text("Processing...")
+                    .font(Theme.processingTitleStyle)
+                    .foregroundColor(Color(.darkGray))
+                
+                Text("This may take 1-2 minutes")
+                    .font(Theme.processingSubtitleStyle)
+                    .foregroundColor(Color(.darkGray))
+            }
         }
+        .padding(27) // 20 * 1.33 ≈ 27
+        .background(Color.white)
+        .cornerRadius(16) // 12 * 1.33 ≈ 16
+        .shadow(color: Color.black.opacity(0.2), radius: 11, x: 0, y: 5) // 8 * 1.33 ≈ 11, 4 * 1.33 ≈ 5
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        .padding()
     }
     
     private func processText() async {

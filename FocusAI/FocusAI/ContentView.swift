@@ -29,6 +29,7 @@ struct ContentView: View {
                                              index == 1 ? "text.justify" : "link")
                             Text(index == 0 ? "PDF" :
                                 index == 1 ? "Text" : "URL")
+                                .font(Theme.buttonStyle)
                         }
                         .foregroundColor(selectedTab == index ? Theme.primaryColor : .gray)
                     }
