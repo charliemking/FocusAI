@@ -185,8 +185,8 @@ public struct TextView: View {
         errorMessage = nil
         
         do {
-            summary = try await serviceManager.generateSummary(from: inputText)
-            flashcards = try await serviceManager.generateFlashcards(from: inputText)
+            summary = try await serviceManager.llmInterface.generateSummary(text: inputText)
+            flashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: inputText, count: 5, difficulty: .intermediate)
         } catch {
             errorMessage = "Error processing text: \(error.localizedDescription)"
             print("❌ Text processing error: \(error)")

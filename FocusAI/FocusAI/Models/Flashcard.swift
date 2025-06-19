@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Flashcard: Identifiable {
+public struct Flashcard: Identifiable, Codable {
     public let id = UUID()
     public var question: String
     public var answer: String

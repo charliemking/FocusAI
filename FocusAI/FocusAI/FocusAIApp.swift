@@ -32,7 +32,7 @@ struct FocusAIApp: App {
                 .environmentObject(serviceManager)
                 .frame(minWidth: 1200, minHeight: 800)
                 .task {
-                    await serviceManager.initialize()
+                    await serviceManager.initializeServices()
                 }
         }
         .windowStyle(.hiddenTitleBar)

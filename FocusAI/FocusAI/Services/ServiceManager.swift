@@ -11,10 +11,11 @@ public class ServiceManager: ObservableObject {
     @Published public var isInitialized = false
     @Published public var isProcessing = false
     @Published public var lastError: Error?
+    @Published public var modelStatus: String = "Not loaded"
     
     // MARK: - Initialization
     
-    public init(useStubServices: Bool = true) {
+    public init(useStubServices: Bool = false) {
         print("🔧 ServiceManager init called with useStubServices: \(useStubServices)")
         
         if useStubServices {
@@ -23,12 +24,14 @@ public class ServiceManager: ObservableObject {
             self.llmInterface = StubLLMInterface()
             self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
             self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
+            self.modelStatus = "Stub mode"
         } else {
-            // Use real CoreML implementation
-            print("🔧 Using real CoreML services")
+            // Use real CoreML implementation with improved backend
+            print("🔧 Using enhanced CoreML services with BPE tokenizer and sampling")
             self.llmInterface = CoreMLLLMInterface()
             self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
             self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
+            self.modelStatus = "Loading..."
         }
         
         print("🔧 ServiceManager initialization complete")
@@ -36,159 +39,220 @@ public class ServiceManager: ObservableObject {
     
     // MARK: - Initialization Methods
     
-    public func initialize() async {
-        guard !isInitialized else { 
-            print("⚠️ ServiceManager already initialized")
-            NSLog("⚠️ ServiceManager already initialized")
-            return 
+    public func initializeServices() async {
+        guard !isInitialized else {
+            print("✅ Services already initialized")
+            return
         }
         
-        print("🚀 Starting ServiceManager initialization...")
-        NSLog("🚀 Starting ServiceManager initialization...")
-        
-        await MainActor.run {
-            isProcessing = true
-            lastError = nil
-        }
+        print("🔄 Initializing services...")
         
         do {
-            print("📞 Calling llmInterface.loadModel()...")
-            NSLog("📞 Calling llmInterface.loadModel()...")
+            await MainActor.run {
+                self.isProcessing = true
+                self.modelStatus = "Loading model..."
+            }
+            
             try await llmInterface.loadModel()
             
             await MainActor.run {
-                isInitialized = true
-                isProcessing = false
+                self.isInitialized = true
+                self.isProcessing = false
+                self.modelStatus = "Model loaded successfully"
+                print("✅ All services initialized successfully")
             }
-            
-            print("✅ ServiceManager initialized successfully")
-            NSLog("✅ ServiceManager initialized successfully")
         } catch {
             await MainActor.run {
-                isProcessing = false
-                lastError = error
+                self.lastError = error
+                self.isProcessing = false
+                self.modelStatus = "Failed to load model"
+                print("❌ Service initialization failed: \(error)")
             }
-            
-            print("❌ ServiceManager initialization failed: \(error.localizedDescription)")
-            NSLog("❌ ServiceManager initialization failed: \(error.localizedDescription)")
         }
     }
     
-    // MARK: - Document Processing Methods
+    // MARK: - Processing Methods
     
-    public func processPDF(_ pdf: PDFDocument) async throws -> ProcessedDocument {
-        return try await withProcessingState {
-            try await documentProcessor.processDocument(pdf: pdf)
+    public func processDocument(pdf: PDFDocument) async throws -> ProcessedDocument {
+        print("📄 Processing PDF document...")
+        
+        await MainActor.run {
+            self.isProcessing = true
+        }
+        
+        defer {
+            Task { @MainActor in
+                self.isProcessing = false
+            }
+        }
+        
+        do {
+            let document = try await documentProcessor.processDocument(pdf: pdf)
+            print("✅ PDF processed successfully: \(document.title)")
+            return document
+        } catch {
+            print("❌ PDF processing failed: \(error)")
+            await MainActor.run {
+                self.lastError = error
+            }
+            throw error
         }
     }
     
-    public func processURL(_ url: URL) async throws -> ProcessedDocument {
-        return try await withProcessingState {
-            try await documentProcessor.processDocument(url: url)
+    public func processDocument(url: URL) async throws -> ProcessedDocument {
+        print("🌐 Processing URL: \(url.absoluteString)")
+        
+        await MainActor.run {
+            self.isProcessing = true
+        }
+        
+        defer {
+            Task { @MainActor in
+                self.isProcessing = false
+            }
+        }
+        
+        do {
+            let document = try await documentProcessor.processDocument(url: url)
+            print("✅ URL processed successfully: \(document.title)")
+            return document
+        } catch {
+            print("❌ URL processing failed: \(error)")
+            await MainActor.run {
+                self.lastError = error
+            }
+            throw error
         }
     }
     
     public func processText(_ text: String) async throws -> ProcessedDocument {
-        return try await withProcessingState {
-            try await documentProcessor.processDocument(text: text)
+        print("📝 Processing text input (\(text.count) characters)...")
+        
+        await MainActor.run {
+            self.isProcessing = true
         }
-    }
-    
-    // MARK: - Individual Service Methods
-    
-    public func generateSummary(from text: String) async throws -> String {
-        return try await withProcessingState {
-            try await llmInterface.generateSummary(text: text)
+        
+        defer {
+            Task { @MainActor in
+                self.isProcessing = false
+            }
         }
-    }
-    
-    public func generateFlashcards(from text: String, count: Int = 8, difficulty: FlashcardDifficulty = .intermediate) async throws -> [Flashcard] {
-        return try await withProcessingState {
-            try await flashcardGenerator.generateFlashcards(from: text, count: count, difficulty: difficulty)
+        
+        do {
+            let document = try await documentProcessor.processDocument(text: text)
+            print("✅ Text processed successfully: \(document.title)")
+            return document
+        } catch {
+            print("❌ Text processing failed: \(error)")
+            await MainActor.run {
+                self.lastError = error
+            }
+            throw error
         }
     }
     
     public func askQuestion(_ question: String, context: String) async throws -> String {
-        return try await withProcessingState {
-            try await llmInterface.askQuestion(question, context: context)
+        print("❓ Answering question: \(question.prefix(50))...")
+        
+        await MainActor.run {
+            self.isProcessing = true
+        }
+        
+        defer {
+            Task { @MainActor in
+                self.isProcessing = false
+            }
+        }
+        
+        do {
+            let answer = try await llmInterface.askQuestion(question, context: context)
+            print("✅ Question answered successfully")
+            return answer
+        } catch {
+            print("❌ Question answering failed: \(error)")
+            await MainActor.run {
+                self.lastError = error
+            }
+            throw error
+        }
+    }
+    
+    public func generateFlashcards(from text: String, count: Int = 6, difficulty: FlashcardDifficulty = .intermediate) async throws -> [Flashcard] {
+        print("🃏 Generating \(count) flashcards at \(difficulty.rawValue) level...")
+        
+        await MainActor.run {
+            self.isProcessing = true
+        }
+        
+        defer {
+            Task { @MainActor in
+                self.isProcessing = false
+            }
+        }
+        
+        do {
+            let flashcards = try await flashcardGenerator.generateFlashcards(from: text, count: count, difficulty: difficulty)
+            print("✅ Generated \(flashcards.count) flashcards successfully")
+            return flashcards
+        } catch {
+            print("❌ Flashcard generation failed: \(error)")
+            await MainActor.run {
+                self.lastError = error
+            }
+            throw error
         }
     }
     
     // MARK: - Utility Methods
     
-    public func extractTextFromPDF(_ pdf: PDFDocument) async throws -> String {
-        return try await withProcessingState {
-            try await documentProcessor.extractText(from: pdf)
+    public func clearLastError() {
+        lastError = nil
+    }
+    
+    public func getModelStatus() -> String {
+        if isProcessing {
+            return "Processing..."
+        } else if isInitialized {
+            return "Ready"
+        } else {
+            return modelStatus
         }
     }
     
-    public func extractTextFromURL(_ url: URL) async throws -> String {
-        return try await withProcessingState {
-            try await documentProcessor.extractText(from: url)
-        }
-    }
+    // MARK: - Test Method
     
-    // MARK: - Private Helper Methods
-    
-    private func withProcessingState<T>(_ operation: () async throws -> T) async throws -> T {
-        await MainActor.run {
-            isProcessing = true
-            lastError = nil
-        }
+    public func testModelCapabilities() async {
+        print("🧪 Testing enhanced model capabilities...")
+        
+        let testText = """
+        Machine learning is a method of data analysis that automates analytical model building. 
+        It is a branch of artificial intelligence based on the idea that systems can learn from data, 
+        identify patterns and make decisions with minimal human intervention. Machine learning algorithms 
+        build a model based on sample data, known as training data, in order to make predictions or 
+        decisions without being explicitly programmed to do so.
+        """
         
         do {
-            let result = try await operation()
+            // Test summary generation
+            print("📊 Testing summary generation...")
+            let summary = try await llmInterface.generateSummary(text: testText)
+            print("✅ Summary: \(summary.prefix(100))...")
             
-            await MainActor.run {
-                isProcessing = false
+            // Test Q&A
+            print("❓ Testing question answering...")
+            let answer = try await llmInterface.askQuestion("What is machine learning?", context: testText)
+            print("✅ Answer: \(answer.prefix(100))...")
+            
+            // Test flashcard generation
+            print("🃏 Testing flashcard generation...")
+            let flashcards = try await llmInterface.generateFlashcards(text: testText)
+            print("✅ Generated \(flashcards.count) flashcards")
+            for (i, card) in flashcards.enumerated() {
+                print("   Card \(i+1): \(card.question)")
             }
             
-            return result
         } catch {
-            await MainActor.run {
-                isProcessing = false
-                lastError = error
-            }
-            
-            throw error
+            print("❌ Test failed: \(error)")
         }
-    }
-    
-    // MARK: - Health Check
-    
-    public func performHealthCheck() async -> HealthCheckResult {
-        var issues: [String] = []
-        
-        // Check LLM
-        if !llmInterface.isModelLoaded() {
-            issues.append("LLM model is not loaded")
-        }
-        
-        // Check initialization
-        if !isInitialized {
-            issues.append("ServiceManager is not initialized")
-        }
-        
-        return HealthCheckResult(
-            isHealthy: issues.isEmpty,
-            issues: issues,
-            timestamp: Date()
-        )
     }
 }
-
-// MARK: - Health Check Result
-
-public struct HealthCheckResult {
-    public let isHealthy: Bool
-    public let issues: [String]
-    public let timestamp: Date
-    
-    public var description: String {
-        if isHealthy {
-            return "✅ All services are healthy"
-        } else {
-            return "⚠️ Issues found:\n" + issues.map { "• \($0)" }.joined(separator: "\n")
-        }
-    }
-} 

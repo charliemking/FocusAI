@@ -176,9 +176,9 @@ public struct URLView: View {
         errorMessage = nil
         
         do {
-            let content = try await serviceManager.extractTextFromURL(url)
-            summary = try await serviceManager.generateSummary(from: content)
-            flashcards = try await serviceManager.generateFlashcards(from: content)
+            let document = try await serviceManager.processDocument(url: url)
+            summary = try await serviceManager.llmInterface.generateSummary(text: document.content)
+            flashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: document.content, count: 5, difficulty: .intermediate)
         } catch {
             errorMessage = "Error loading URL: \(error.localizedDescription)"
         }

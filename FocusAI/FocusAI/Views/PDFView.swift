@@ -333,8 +333,8 @@ public struct PDFView: View {
         isProcessing = true
         
         do {
-            summary = try await serviceManager.generateSummary(from: extractTextFromPDF(pdf))
-            flashcards = try await serviceManager.generateFlashcards(from: extractTextFromPDF(pdf))
+            summary = try await serviceManager.llmInterface.generateSummary(text: extractTextFromPDF(pdf))
+            flashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: extractTextFromPDF(pdf), count: 5, difficulty: .intermediate)
         } catch {
             errorAlert = ErrorAlert(
                 title: "Processing Error",
