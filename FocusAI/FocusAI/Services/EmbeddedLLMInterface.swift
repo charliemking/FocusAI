@@ -55,6 +55,62 @@ public class EmbeddedLLMInterface: LLMInterface {
         return modelPath
     }
     
+    // MARK: - Performance Monitoring
+    
+    private var performanceMetrics: [String: [Double]] = [:]
+    
+    private func recordPerformanceMetric(_ operation: String, duration: Double, tokenCount: Int = 0) {
+        if performanceMetrics[operation] == nil {
+            performanceMetrics[operation] = []
+        }
+        performanceMetrics[operation]?.append(duration)
+        
+        let tokensPerSecond = tokenCount > 0 ? Double(tokenCount) / duration : 0
+        let message = "⚡ \(operation): \(String(format: "%.2f", duration))s" + (tokensPerSecond > 0 ? " (\(String(format: "%.1f", tokensPerSecond)) tok/s)" : "")
+        logger.info("\(message)")
+    }
+    
+    public func getPerformanceReport() -> String {
+        var report = """
+        🚀 FocusAI Performance Report
+        ============================
+        
+        """
+        
+        for (operation, durations) in performanceMetrics {
+            let average = durations.reduce(0, +) / Double(durations.count)
+            let min = durations.min() ?? 0
+            let max = durations.max() ?? 0
+            
+            report += """
+            📊 \(operation):
+            • Runs: \(durations.count)
+            • Average: \(String(format: "%.2f", average))s
+            • Best: \(String(format: "%.2f", min))s
+            • Worst: \(String(format: "%.2f", max))s
+            
+            """
+        }
+        
+        // System info
+        let cpuCount = ProcessInfo.processInfo.processorCount
+        let memoryGB = ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024)
+        
+        report += """
+        💻 System Info:
+        • CPU Cores: \(cpuCount)
+        • Memory: \(memoryGB) GB
+        • Model: Phi-3-mini (CPU-only, thermal-safe)
+        """
+        
+        return report
+    }
+    
+    public func resetPerformanceMetrics() {
+        performanceMetrics.removeAll()
+        logger.info("🔄 Performance metrics reset")
+    }
+    
     public init() {
         logger.info("🔧 EmbeddedLLMInterface initialized")
     }
@@ -91,6 +147,11 @@ public class EmbeddedLLMInterface: LLMInterface {
         if !serverLogs.isEmpty {
             diagnostics += "\n📋 Recent Server Logs:\n"
             diagnostics += serverLogs.suffix(10).joined(separator: "\n")
+        }
+        
+        // Add performance metrics
+        if !performanceMetrics.isEmpty {
+            diagnostics += "\n\n" + getPerformanceReport()
         }
         
         return diagnostics
@@ -203,11 +264,47 @@ public class EmbeddedLLMInterface: LLMInterface {
             throw LLMError.modelNotLoaded
         }
         
+        let startTime = Date()
+        
+        // Use smart chunking only for very large documents (>8000 chars) - short prompts are faster
+        if text.count > 8000 {
+            logger.info("📄 Large document detected (\(text.count) chars), using smart chunking for faster processing...")
+            
+            do {
+                let chunks = chunkText(text, maxChunkSize: 1200) // Larger chunks for fewer requests
+                logger.info("🔪 Split into \(chunks.count) chunks for sequential processing")
+                
+                // Process chunks sequentially (server can only handle one at a time anyway)
+                var chunkSummaries: [String] = []
+                for (index, chunk) in chunks.enumerated() {
+                    logger.info("⚡ Processing chunk \(index + 1)/\(chunks.count)...")
+                    let summary = try await generateChunkSummary(chunk)
+                    chunkSummaries.append(summary)
+                }
+                
+                // Combine the chunk summaries
+                let finalSummary = try await combineChunkSummaries(chunkSummaries)
+                let duration = Date().timeIntervalSince(startTime)
+                
+                recordGenerationStats(prompt: "Chunked summary (\(chunks.count) chunks)", 
+                                    rawResponse: finalSummary, cleanedResponse: finalSummary, 
+                                    duration: duration, usedFallback: false, fallbackReason: nil)
+                
+                recordPerformanceMetric("Chunked Summary", duration: duration, tokenCount: finalSummary.split(separator: " ").count)
+                logger.info("✅ Chunked summary completed in \(String(format: "%.2f", duration))s (was \(chunks.count) sequential chunks)")
+                return finalSummary
+                
+            } catch {
+                logger.warning("⚠️ Chunked processing failed, falling back to truncated single pass: \(error)")
+                // Fall back to truncated single processing
+            }
+        }
+        
+        // Original single-pass processing for smaller documents or fallback
         let prompt = buildSummaryPrompt(text: text)
         
         do {
-            let startTime = Date()
-            let response = try await generateText(prompt: prompt, maxTokens: 800)
+            let response = try await generateText(prompt: prompt, maxTokens: 400) // Back to balanced token count
             let duration = Date().timeIntervalSince(startTime)
             let cleanedResponse = cleanGeneratedText(response, for: .summary)
             
@@ -222,6 +319,7 @@ public class EmbeddedLLMInterface: LLMInterface {
             
             recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: cleanedResponse, 
                                 duration: duration, usedFallback: false, fallbackReason: nil)
+            recordPerformanceMetric("Single Summary", duration: duration, tokenCount: cleanedResponse.split(separator: " ").count)
             logger.info("✅ Summary generated successfully in \(String(format: "%.2f", duration))s")
             return cleanedResponse
         } catch {
@@ -313,23 +411,25 @@ public class EmbeddedLLMInterface: LLMInterface {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: llamaCppServerPath)
         
-        // Optimized server arguments for better performance
+        // Optimized server arguments for better CPU performance (no GPU to avoid overheating)
         let cpuCount = ProcessInfo.processInfo.processorCount
-        let threads = max(2, min(cpuCount - 1, 8)) // Use 2-8 threads optimally
+        let performanceCores = max(2, min(cpuCount / 2, 4)) // Use only performance cores, conservative threading
+        let memoryGB = ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024)
+        let contextSize = memoryGB >= 16 ? 8192 : 4096 // Larger context for better caching
         
         process.arguments = [
             "--model", modelPath,
             "--port", "\(self.serverPort)",
             "--host", "127.0.0.1",
-            "--ctx-size", "4096", 
-            "--threads", "\(threads)",
-            "--n-gpu-layers", "0", // Keep GPU disabled for stability
-            "--batch-size", "512", // Optimize batch size
-            "--ubatch-size", "256", // Optimize micro-batch size
+            "--ctx-size", "\(contextSize)", // Increased context for better caching
+            "--threads", "\(performanceCores)", // Conservative threading to avoid overheating
+            "--n-gpu-layers", "0", // NO GPU - keep it CPU-only for thermal safety
+            "--batch-size", "512", // Back to balanced batch size for stability
+            "--ubatch-size", "256", // Back to balanced micro-batch size
             "--n-predict", "-1", // Don't limit predictions
-            "--temp", "0.7",
-            "--top-p", "0.9",
-            "--repeat-penalty", "1.1",
+            "--temp", "0.7", // Back to balanced temperature
+            "--top-p", "0.9", // Back to balanced top-p
+            "--repeat-penalty", "1.1", // Back to balanced penalty
             "--mlock", // Lock model in memory for speed
             "--verbose", // Enable verbose logging for debugging
         ]
@@ -564,15 +664,15 @@ public class EmbeddedLLMInterface: LLMInterface {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 120 
+        request.timeoutInterval = 120 // Back to reasonable timeout
         
         let requestBody: [String: Any] = [
             "prompt": prompt,
             "n_predict": maxTokens,
-            "temperature": 0.7,
-            "top_p": 0.9,
-            "top_k": 40,
-            "repeat_penalty": 1.1,
+            "temperature": 0.7, // Back to balanced temperature
+            "top_p": 0.9, // Back to balanced top-p
+            "top_k": 40, // Back to balanced top-k
+            "repeat_penalty": 1.1, // Back to balanced penalty
             "stream": false,
             "stop": ["<|end|>", "<|user|>"]
         ]
@@ -611,193 +711,384 @@ public class EmbeddedLLMInterface: LLMInterface {
         }
     }
     
-         // MARK: - Utility Methods
-     
-     private func recordGenerationStats(prompt: String, rawResponse: String, cleanedResponse: String, 
-                                      duration: TimeInterval, usedFallback: Bool, fallbackReason: String?) {
-         let tokenCount = rawResponse.split(separator: " ").count // Rough token estimate
-         lastGenerationStats = GenerationStats(
-             prompt: String(prompt.prefix(200)), // Store first 200 chars of prompt
-             rawResponse: rawResponse,
-             cleanedResponse: cleanedResponse,
-             tokenCount: tokenCount,
-             duration: duration,
-             usedFallback: usedFallback,
-             fallbackReason: fallbackReason,
-             timestamp: Date()
-         )
-     }
-     
-     // MARK: - Prompt Building
-     
-     private func buildSummaryPrompt(text: String) -> String {
-         let truncatedText = String(text.prefix(12000)) // Reduced from 15000 for faster processing
+    // MARK: - Smart Document Chunking for Performance
+    
+    private func chunkText(_ text: String, maxChunkSize: Int = 800) -> [String] {
+        // Preprocess text to remove artifacts and optimize tokens
+        let cleanedText = preprocessText(text)
+        
+        // Split by paragraphs first, then by sentences if needed
+        let paragraphs = cleanedText.components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        
+        var chunks: [String] = []
+        var currentChunk = ""
+        
+        for paragraph in paragraphs {
+            // If paragraph is too long, split by sentences
+            if paragraph.count > maxChunkSize {
+                let sentences = paragraph.components(separatedBy: CharacterSet(charactersIn: ".!?"))
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+                
+                for sentence in sentences {
+                    if currentChunk.count + sentence.count + 2 > maxChunkSize {
+                        if !currentChunk.isEmpty {
+                            chunks.append(currentChunk)
+                            currentChunk = sentence
+                        }
+                    } else {
+                        if !currentChunk.isEmpty {
+                            currentChunk += ". " + sentence
+                        } else {
+                            currentChunk = sentence
+                        }
+                    }
+                }
+            } else {
+                // Add whole paragraph if it fits
+                if currentChunk.count + paragraph.count + 2 > maxChunkSize {
+                    if !currentChunk.isEmpty {
+                        chunks.append(currentChunk)
+                        currentChunk = paragraph
+                    }
+                } else {
+                    if !currentChunk.isEmpty {
+                        currentChunk += "\n\n" + paragraph
+                    } else {
+                        currentChunk = paragraph
+                    }
+                }
+            }
+        }
+        
+        // Add the last chunk
+        if !currentChunk.isEmpty {
+            chunks.append(currentChunk)
+        }
+        
+        return chunks.isEmpty ? [text] : chunks
+    }
+    
+    private func generateChunkSummary(_ chunk: String) async throws -> String {
+        // Much shorter prompt for faster processing
+        let prompt = """
+        <|system|>Summarize in 2-3 sentences.<|end|>
+        <|user|>\(chunk)
+
+        Summary:<|end|>
+        <|assistant|>
+        """
+        
+        let response = try await generateText(prompt: prompt, maxTokens: 100) // Reduced tokens
+        return cleanGeneratedText(response, for: .summary)
+    }
+    
+    private func combineChunkSummaries(_ summaries: [String]) async throws -> String {
+        let combinedSummaries = summaries.joined(separator: "\n\n")
+        
+        // Shorter prompt for faster processing
+        let prompt = """
+        <|system|>Combine into one comprehensive summary.<|end|>
+        <|user|>\(combinedSummaries)
+
+        Unified summary:<|end|>
+        <|assistant|>
+        """
+        
+        let response = try await generateText(prompt: prompt, maxTokens: 400) // Reduced tokens
+        return cleanGeneratedText(response, for: .summary)
+    }
+    
+    // MARK: - Utility Methods
+    
+    private func recordGenerationStats(prompt: String, rawResponse: String, cleanedResponse: String, 
+                                     duration: TimeInterval, usedFallback: Bool, fallbackReason: String?) {
+        let tokenCount = rawResponse.split(separator: " ").count // Rough token estimate
+        lastGenerationStats = GenerationStats(
+            prompt: String(prompt.prefix(200)), // Store first 200 chars of prompt
+            rawResponse: rawResponse,
+            cleanedResponse: cleanedResponse,
+            tokenCount: tokenCount,
+            duration: duration,
+            usedFallback: usedFallback,
+            fallbackReason: fallbackReason,
+            timestamp: Date()
+        )
+    }
+    
+    // MARK: - Prompt Building
+    
+         private func buildSummaryPrompt(text: String) -> String {
+         let cleanedText = preprocessText(text)
+         let truncatedText = String(cleanedText.prefix(4000)) // Back to balanced text length
          return """
-         <|system|>You are an expert summarization assistant. Create comprehensive, well-structured summaries that capture the main ideas, key arguments, supporting details, and conclusions. Write in clear, engaging prose that maintains the original meaning while being concise.<|end|>
-         <|user|>Please analyze the following text and create a detailed summary. Structure your response with clear paragraphs covering:
-         1. Main topic and purpose
-         2. Key points and arguments
-         3. Important details and examples
-         4. Conclusions or implications
+         <|system|>Create a comprehensive summary.<|end|>
+         <|user|>\(truncatedText)
 
-         Text to summarize:
-         \(truncatedText)
-
-         Please provide a comprehensive summary:<|end|>
+         Summary:<|end|>
          <|assistant|>
          """
      }
-     
-     private func buildQuestionAnswerPrompt(question: String, context: String) -> String {
-         let truncatedContext = String(context.prefix(10000)) // Reduced from 12000 for faster processing
-         return """
-         <|system|>You are a knowledgeable research assistant that provides thorough, accurate answers based on the given context. Analyze the context carefully and provide detailed, well-reasoned responses. Use specific information from the context to support your answers.<|end|>
-         <|user|>Context for reference:
-         \(truncatedContext)
+    
+    private func buildQuestionAnswerPrompt(question: String, context: String) -> String {
+        let truncatedContext = String(context.prefix(10000)) // Reduced from 12000 for faster processing
+        return """
+        <|system|>You are a knowledgeable research assistant that provides thorough, accurate answers based on the given context. Analyze the context carefully and provide detailed, well-reasoned responses. Use specific information from the context to support your answers.<|end|>
+        <|user|>Context for reference:
+        \(truncatedContext)
 
-         Question: \(question)
+        Question: \(question)
 
-         Please provide a comprehensive answer based on the context above. Include specific details and explain your reasoning.<|end|>
-         <|assistant|>
-         """
-     }
-     
-     private func buildFlashcardPrompt(text: String) -> String {
-         let truncatedText = String(text.prefix(10000))
-         return """
-         <|system|>You are an expert educational content creator. Create high-quality flashcards that test key concepts, important facts, and critical understanding. Each flashcard should have a clear, specific question and a comprehensive but concise answer. Focus on the most important information that students need to learn.<|end|>
-         <|user|>Create 5-8 educational flashcards from the following content. Focus on the most important concepts, facts, and ideas that students should remember. Format each flashcard exactly as:
+        Please provide a comprehensive answer based on the context above. Include specific details and explain your reasoning.<|end|>
+        <|assistant|>
+        """
+    }
+    
+    private func buildFlashcardPrompt(text: String) -> String {
+        let truncatedText = String(text.prefix(10000))
+        return """
+        <|system|>You are an expert educational content creator. Create high-quality flashcards that test key concepts, important facts, and critical understanding. Each flashcard should have a clear, specific question and a comprehensive but concise answer. Focus on the most important information that students need to learn.<|end|>
+        <|user|>Create 5-8 educational flashcards from the following content. Focus on the most important concepts, facts, and ideas that students should remember. Format each flashcard exactly as:
 
-         Q: [Clear, specific question]
-         A: [Comprehensive but concise answer]
+        Q: [Clear, specific question]
+        A: [Comprehensive but concise answer]
 
-         Content:
-         \(truncatedText)<|end|>
-         <|assistant|>
-         """
-     }
-     
-     // MARK: - Response Processing
-     
-     private enum GenerationType {
-         case summary
-         case questionAnswer
-         case flashcard
-     }
-     
-     private func cleanGeneratedText(_ text: String, for type: GenerationType) -> String {
-         var cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
-         
-         // Remove common AI prefixes
-         let prefixesToRemove = [
-             "Here's a summary:",
-             "Summary:",
-             "Here is a summary:",
-             "Here is an example summary:",
-             "Based on the provided context:",
-             "Answer:",
-             "Here's the answer:",
-         ]
-         
-         for prefix in prefixesToRemove {
-             if cleaned.lowercased().hasPrefix(prefix.lowercased()) {
-                 cleaned = String(cleaned.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
-             }
-         }
-         
-         return cleaned
-     }
-     
-     private func parseFlashcards(from text: String) -> [Flashcard] {
-         var flashcards: [Flashcard] = []
-         let lines = text.components(separatedBy: .newlines)
-         
-         var currentQuestion: String?
-         var currentAnswer: String?
-         
-         for line in lines {
-             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-             
-             if trimmed.lowercased().hasPrefix("q:") || trimmed.lowercased().hasPrefix("question:") {
-                 // Save previous flashcard if complete
-                 if let q = currentQuestion, let a = currentAnswer {
-                     flashcards.append(Flashcard(question: q, answer: a))
-                 }
-                 
-                 currentQuestion = String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
-                 currentAnswer = nil
-             } else if trimmed.lowercased().hasPrefix("a:") || trimmed.lowercased().hasPrefix("answer:") {
-                 currentAnswer = String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
-             }
-         }
-         
-         // Add the last flashcard
-         if let q = currentQuestion, let a = currentAnswer {
-             flashcards.append(Flashcard(question: q, answer: a))
-         }
-         
-         return flashcards
-     }
-     
-     // MARK: - Fallback Methods
-     
-     private func createFallbackAnswer(question: String, context: String) -> String {
-         return """
-         Based on the provided context, here's what I can tell you about your question:
-         
-         **Question:** \(question)
-         
-         **Answer:** The context discusses relevant information that helps address your question. While I cannot provide a complete AI-generated response at this moment, I encourage you to review the key sections of the material that relate to: \(extractKeyTerms(from: context).prefix(3).joined(separator: ", ")).
-         
-         For the most accurate information, please refer to the original source material.
-         """
-     }
-     
-     private func createFallbackSummary(from text: String) -> String {
-         let sentences = text.components(separatedBy: CharacterSet(charactersIn: ".!?"))
-             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-             .filter { !$0.isEmpty && $0.count > 20 }
-             .prefix(3)
-         
-         if sentences.isEmpty {
-             return "Summary: The provided text contains information about \(extractKeyTerms(from: text).prefix(3).joined(separator: ", ")). Please review the original content for detailed information."
-         }
-         
-         return sentences.joined(separator: ". ") + "."
-     }
-     
-     private func createFallbackFlashcards(from text: String) -> [Flashcard] {
-         let keyTerms = extractKeyTerms(from: text).prefix(6)
-         return keyTerms.map { term in
-             Flashcard(
-                 question: "What is \(term)?",
-                 answer: "Based on the provided text, \(term) is an important concept. Please review the source material for detailed information."
-             )
-         }
-     }
-     
-     private func extractKeyTerms(from text: String) -> [String] {
-         let commonWords = Set([
-             "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
-             "a", "an", "is", "are", "was", "were", "be", "been", "have", "has", "had"
-         ])
-         
-         let words = text.lowercased()
-             .components(separatedBy: CharacterSet.alphanumerics.inverted)
-             .filter { word in
-                 word.count >= 4 &&
-                 word.count <= 20 &&
-                 !commonWords.contains(word) &&
-                 !word.allSatisfy { $0.isNumber }
-             }
-         
-         let wordCounts = Dictionary(grouping: words, by: { $0 })
-             .mapValues { $0.count }
-             .filter { $0.value >= 2 }
-             .sorted { $0.value > $1.value }
-             .prefix(10)
-             .map { $0.key }
-         
-         return Array(wordCounts)
-     }
-  } 
+        Content:
+        \(truncatedText)<|end|>
+        <|assistant|>
+        """
+    }
+    
+    // MARK: - Response Processing
+    
+    private enum GenerationType {
+        case summary
+        case questionAnswer
+        case flashcard
+    }
+    
+    private func cleanGeneratedText(_ text: String, for type: GenerationType) -> String {
+        var cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Remove common AI prefixes
+        let prefixesToRemove = [
+            "Here's a summary:",
+            "Summary:",
+            "Here is a summary:",
+            "Here is an example summary:",
+            "Based on the provided context:",
+            "Answer:",
+            "Here's the answer:",
+        ]
+        
+        for prefix in prefixesToRemove {
+            if cleaned.lowercased().hasPrefix(prefix.lowercased()) {
+                cleaned = String(cleaned.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        
+        return cleaned
+    }
+    
+    private func parseFlashcards(from text: String) -> [Flashcard] {
+        var flashcards: [Flashcard] = []
+        let lines = text.components(separatedBy: .newlines)
+        
+        var currentQuestion: String?
+        var currentAnswer: String?
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            if trimmed.lowercased().hasPrefix("q:") || trimmed.lowercased().hasPrefix("question:") {
+                // Save previous flashcard if complete
+                if let q = currentQuestion, let a = currentAnswer {
+                    flashcards.append(Flashcard(question: q, answer: a))
+                }
+                
+                currentQuestion = String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
+                currentAnswer = nil
+            } else if trimmed.lowercased().hasPrefix("a:") || trimmed.lowercased().hasPrefix("answer:") {
+                currentAnswer = String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        
+        // Add the last flashcard
+        if let q = currentQuestion, let a = currentAnswer {
+            flashcards.append(Flashcard(question: q, answer: a))
+        }
+        
+        return flashcards
+    }
+    
+    // MARK: - Fallback Methods
+    
+    private func createFallbackAnswer(question: String, context: String) -> String {
+        return """
+        Based on the provided context, here's what I can tell you about your question:
+        
+        **Question:** \(question)
+        
+        **Answer:** The context discusses relevant information that helps address your question. While I cannot provide a complete AI-generated response at this moment, I encourage you to review the key sections of the material that relate to: \(extractKeyTerms(from: context).prefix(3).joined(separator: ", ")).
+        
+        For the most accurate information, please refer to the original source material.
+        """
+    }
+    
+    private func createFallbackSummary(from text: String) -> String {
+        let sentences = text.components(separatedBy: CharacterSet(charactersIn: ".!?"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && $0.count > 20 }
+            .prefix(3)
+        
+        if sentences.isEmpty {
+            return "Summary: The provided text contains information about \(extractKeyTerms(from: text).prefix(3).joined(separator: ", ")). Please review the original content for detailed information."
+        }
+        
+        return sentences.joined(separator: ". ") + "."
+    }
+    
+    private func createFallbackFlashcards(from text: String) -> [Flashcard] {
+        let keyTerms = extractKeyTerms(from: text).prefix(6)
+        return keyTerms.map { term in
+            Flashcard(
+                question: "What is \(term)?",
+                answer: "Based on the provided text, \(term) is an important concept. Please review the source material for detailed information."
+            )
+        }
+    }
+    
+    private func extractKeyTerms(from text: String) -> [String] {
+        let commonWords = Set([
+            "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
+            "a", "an", "is", "are", "was", "were", "be", "been", "have", "has", "had"
+        ])
+        
+        let words = text.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { word in
+                word.count >= 4 &&
+                word.count <= 20 &&
+                !commonWords.contains(word) &&
+                !word.allSatisfy { $0.isNumber }
+            }
+        
+        let wordCounts = Dictionary(grouping: words, by: { $0 })
+            .mapValues { $0.count }
+            .filter { $0.value >= 2 }
+            .sorted { $0.value > $1.value }
+            .prefix(10)
+            .map { $0.key }
+        
+        return Array(wordCounts)
+    }
+    
+    // MARK: - Streaming Text Generation for Better UX
+    
+    public func generateTextWithProgress(
+        prompt: String, 
+        maxTokens: Int = 500,
+        onProgress: @escaping (String) -> Void
+    ) async throws -> String {
+        guard isLoaded else {
+            throw LLMError.processingFailed("Model not loaded")
+        }
+        
+        let url = URL(string: "\(baseURL)/completion")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let requestBody: [String: Any] = [
+            "prompt": prompt,
+            "n_predict": maxTokens,
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "repeat_penalty": 1.1,
+            "stream": true // Enable streaming
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMError.processingFailed("Invalid response")
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            throw LLMError.processingFailed("HTTP \(httpResponse.statusCode)")
+        }
+        
+        var fullResponse = ""
+        var buffer = ""
+        
+        for try await byte in asyncBytes {
+            buffer.append(Character(UnicodeScalar(byte) ?? UnicodeScalar(32)!))
+            
+            // Process complete lines
+            if buffer.contains("\n") {
+                let lines = buffer.components(separatedBy: "\n")
+                buffer = lines.last ?? ""
+                
+                for line in lines.dropLast() {
+                    if line.hasPrefix("data: ") {
+                        let jsonString = String(line.dropFirst(6))
+                        if jsonString == "[DONE]" {
+                            break
+                        }
+                        
+                        if let data = jsonString.data(using: .utf8),
+                           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                           let content = json["content"] as? String {
+                            fullResponse += content
+                            
+                            // Call progress callback with accumulated text
+                            let currentResponse = fullResponse
+                            await MainActor.run {
+                                onProgress(currentResponse)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return fullResponse
+    }
+    
+    // MARK: - Text Preprocessing for Efficiency
+    
+    private func preprocessText(_ text: String) -> String {
+        var processed = text
+        
+        // Remove excessive whitespace
+        processed = processed.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        
+        // Remove multiple consecutive newlines
+        processed = processed.replacingOccurrences(of: "\\n\\s*\\n\\s*\\n+", with: "\n\n", options: .regularExpression)
+        
+        // Remove leading/trailing whitespace from lines
+        let lines = processed.components(separatedBy: .newlines)
+        processed = lines.map { $0.trimmingCharacters(in: .whitespaces) }
+                        .filter { !$0.isEmpty }
+                        .joined(separator: "\n")
+        
+        // Remove common PDF artifacts that waste tokens
+        let artifactsToRemove = [
+            "Page \\d+", // Page numbers
+            "\\d+/\\d+", // Page ratios
+            "©.*?\\d{4}", // Copyright notices
+            "www\\.\\S+", // URLs (keep content, remove URLs)
+            "https?://\\S+", // HTTP URLs
+        ]
+        
+        for pattern in artifactsToRemove {
+            processed = processed.replacingOccurrences(of: pattern, with: "", options: .regularExpression)
+        }
+        
+        return processed.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+} 
