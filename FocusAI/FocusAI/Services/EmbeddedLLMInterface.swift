@@ -304,7 +304,7 @@ public class EmbeddedLLMInterface: LLMInterface {
         let prompt = buildSummaryPrompt(text: text)
         
         do {
-            let response = try await generateText(prompt: prompt, maxTokens: 400) // Back to balanced token count
+            let response = try await generateText(prompt: prompt, maxTokens: 400) // Reduced for speed
             let duration = Date().timeIntervalSince(startTime)
             let cleanedResponse = cleanGeneratedText(response, for: .summary)
             
@@ -424,12 +424,12 @@ public class EmbeddedLLMInterface: LLMInterface {
             "--ctx-size", "\(contextSize)", // Increased context for better caching
             "--threads", "\(performanceCores)", // Conservative threading to avoid overheating
             "--n-gpu-layers", "0", // NO GPU - keep it CPU-only for thermal safety
-            "--batch-size", "512", // Back to balanced batch size for stability
-            "--ubatch-size", "256", // Back to balanced micro-batch size
+            "--batch-size", "512", // Optimized batch size for stability
+            "--ubatch-size", "256", // Optimized micro-batch size
             "--n-predict", "-1", // Don't limit predictions
-            "--temp", "0.7", // Back to balanced temperature
-            "--top-p", "0.9", // Back to balanced top-p
-            "--repeat-penalty", "1.1", // Back to balanced penalty
+            "--temp", "0.7",
+            "--top-p", "0.9",
+            "--repeat-penalty", "1.1",
             "--mlock", // Lock model in memory for speed
             "--verbose", // Enable verbose logging for debugging
         ]
@@ -664,15 +664,15 @@ public class EmbeddedLLMInterface: LLMInterface {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 120 // Back to reasonable timeout
+        request.timeoutInterval = 120 
         
         let requestBody: [String: Any] = [
             "prompt": prompt,
             "n_predict": maxTokens,
-            "temperature": 0.7, // Back to balanced temperature
-            "top_p": 0.9, // Back to balanced top-p
-            "top_k": 40, // Back to balanced top-k
-            "repeat_penalty": 1.1, // Back to balanced penalty
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "top_k": 40,
+            "repeat_penalty": 1.1,
             "stream": false,
             "stop": ["<|end|>", "<|user|>"]
         ]
@@ -822,7 +822,7 @@ public class EmbeddedLLMInterface: LLMInterface {
     
          private func buildSummaryPrompt(text: String) -> String {
          let cleanedText = preprocessText(text)
-         let truncatedText = String(cleanedText.prefix(4000)) // Back to balanced text length
+         let truncatedText = String(cleanedText.prefix(4000)) // Aggressively reduced for speed
          return """
          <|system|>Create a comprehensive summary.<|end|>
          <|user|>\(truncatedText)
