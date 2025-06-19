@@ -51,7 +51,7 @@ public class StubLLMInterface: LLMInterface {
         // Simulate processing time
         try await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
         
-        // Use the same improved approach as CoreMLLLMInterface
+        // Create a natural summary from the provided text
         return createNaturalSummary(from: text)
     }
     
