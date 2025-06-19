@@ -49,10 +49,12 @@ public class EmbeddedLLMInterface: LLMInterface {
             try await waitForServerReady()
             
             logger.info("🔄 Testing model with simple generation...")
-            let testResponse = try await generateText(prompt: "Hello", maxTokens: 5)
+            let testPrompt = "<|user|>\nHello<|end|>\n<|assistant|>\n"
+            let testResponse = try await generateText(prompt: testPrompt, maxTokens: 10)
             guard !testResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw LLMError.modelLoadFailed("Model test failed - no response generated")
             }
+            logger.info("✅ Test response: \(testResponse.prefix(50))...")
             
             isLoaded = true
             logger.info("✅ Embedded Phi-3 model loaded successfully")
