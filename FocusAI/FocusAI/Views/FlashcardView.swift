@@ -37,19 +37,22 @@ public struct FlashcardView: View {
                     .frame(height: 3)
                     .padding(.horizontal, 8)
                 
-                // Main flashcard with overlaid navigation
+                // Main flashcard with overlaid controls
                 ZStack {
                     flashcardBody
                     
-                    // Overlaid navigation controls
+                    // Overlaid navigation controls (bottom)
                     VStack {
                         Spacer()
                         overlaidNavigationControls
                     }
+                    
+                    // Overlaid action buttons (top)
+                    VStack {
+                        overlaidActionButtons
+                        Spacer()
+                    }
                 }
-                
-                // Action buttons (more compact)
-                compactActionButtons
             }
         }
         .padding(.horizontal, 6)
@@ -102,7 +105,7 @@ public struct FlashcardView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, 8)
                         }
-                        .frame(maxHeight: 100)
+                        .frame(maxHeight: 140)
                     } else {
                         ScrollView {
                             Text(currentFlashcard.question)
@@ -113,7 +116,7 @@ public struct FlashcardView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, 8)
                         }
-                        .frame(maxHeight: 100)
+                        .frame(maxHeight: 140)
                     }
                 }
                 
@@ -136,12 +139,58 @@ public struct FlashcardView: View {
             }
             .padding(20)
         }
-        .frame(minHeight: 180, maxHeight: 200)
+        .frame(minHeight: 240, maxHeight: 280)
         .transition(.opacity)
         .onTapGesture {
             flipCard()
         }
         .animation(.spring(response: 0.6, dampingFraction: 0.8), value: currentIndex)
+    }
+    
+    private var overlaidActionButtons: some View {
+        HStack(spacing: 12) {
+            // Shuffle button (overlaid, compact)
+            Button(action: shuffleCards) {
+                HStack(spacing: 4) {
+                    Image(systemName: "shuffle")
+                    Text("Shuffle")
+                }
+                .font(.caption)
+                .foregroundColor(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Theme.primaryColor)
+                        .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
+                )
+            }
+            
+            Spacer()
+            
+            // Restart button (overlaid, compact)
+            Button(action: restartDeck) {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.counterclockwise")
+                    Text("Restart")
+                }
+                .font(.caption)
+                .foregroundColor(Theme.primaryColor)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            Capsule()
+                                .stroke(Theme.primaryColor, lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
+                )
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
     }
     
     private var overlaidNavigationControls: some View {
