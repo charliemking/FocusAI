@@ -9,7 +9,8 @@ public struct URLView: View {
     @State private var question = ""
     @State private var answer = ""
     @State private var errorMessage: String?
-    @State private var rotationAngle = 0.0
+    @State private var summaryRotationAngle = 0.0
+    @State private var flashcardRotationAngle = 0.0
     @State private var isLoadingFlashcards = false
     @State private var currentDocumentText = ""
     @State private var flashcardTask: Task<Void, Never>?
@@ -204,9 +205,9 @@ public struct URLView: View {
                 .trim(from: 0, to: 0.8)
                 .stroke(Color(.darkGray), lineWidth: 5) // 4 * 1.33 ≈ 5
                 .frame(width: 53, height: 53) // 40 * 1.33 ≈ 53
-                .rotationEffect(.degrees(rotationAngle))
+                .rotationEffect(.degrees(summaryRotationAngle))
                 .onAppear {
-                    startSpinning()
+                    startSummarySpinning()
                 }
             
             VStack(spacing: 5) { // 4 * 1.33 ≈ 5
@@ -226,10 +227,17 @@ public struct URLView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
     
-    private func startSpinning() {
-        rotationAngle = 0
+    private func startSummarySpinning() {
+        summaryRotationAngle = 0
         withAnimation(Animation.linear(duration: 1.5).repeatForever(autoreverses: false)) {
-            rotationAngle = 360
+            summaryRotationAngle = 360
+        }
+    }
+    
+    private func startFlashcardSpinning() {
+        flashcardRotationAngle = 0
+        withAnimation(Animation.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+            flashcardRotationAngle = 360
         }
     }
     
@@ -240,9 +248,9 @@ public struct URLView: View {
                 .trim(from: 0, to: 0.8)
                 .stroke(Color(.darkGray), lineWidth: 5)
                 .frame(width: 53, height: 53)
-                .rotationEffect(.degrees(rotationAngle))
+                .rotationEffect(.degrees(flashcardRotationAngle))
                 .onAppear {
-                    startSpinning()
+                    startFlashcardSpinning()
                 }
             
             VStack(spacing: 5) {
@@ -296,8 +304,10 @@ public struct URLView: View {
             async let summaryTask = serviceManager.llmInterface.generateSummary(text: document.content)
             
             // Start flashcard generation in background with proper task management
-            isLoadingFlashcards = true // Set immediately
             flashcardTask = Task {
+                await MainActor.run {
+                    isLoadingFlashcards = true
+                }
                 await generateFlashcardsInBackground()
             }
             

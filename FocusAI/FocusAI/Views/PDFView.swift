@@ -20,7 +20,8 @@ public struct PDFView: View {
     @State private var answer = ""
     @State private var errorAlert: ErrorAlert?
     @State private var errorMessage: String?
-    @State private var rotationAngle = 0.0
+    @State private var summaryRotationAngle = 0.0
+    @State private var flashcardRotationAngle = 0.0
     @State private var isLoadingFlashcards = false
     @State private var currentPDFText = ""
     @State private var flashcardTask: Task<Void, Never>?
@@ -260,9 +261,9 @@ public struct PDFView: View {
                 .trim(from: 0, to: 0.8)
                 .stroke(Color(.darkGray), lineWidth: 5) // 4 * 1.33 ≈ 5
                 .frame(width: 53, height: 53) // 40 * 1.33 ≈ 53
-                .rotationEffect(.degrees(rotationAngle))
+                .rotationEffect(.degrees(summaryRotationAngle))
                 .onAppear {
-                    startSpinning()
+                    startSummarySpinning()
                 }
             
             VStack(spacing: 5) { // 4 * 1.33 ≈ 5
@@ -282,10 +283,17 @@ public struct PDFView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
     
-    private func startSpinning() {
-        rotationAngle = 0
+    private func startSummarySpinning() {
+        summaryRotationAngle = 0
         withAnimation(Animation.linear(duration: 1.5).repeatForever(autoreverses: false)) {
-            rotationAngle = 360
+            summaryRotationAngle = 360
+        }
+    }
+    
+    private func startFlashcardSpinning() {
+        flashcardRotationAngle = 0
+        withAnimation(Animation.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+            flashcardRotationAngle = 360
         }
     }
     
@@ -296,9 +304,9 @@ public struct PDFView: View {
                 .trim(from: 0, to: 0.8)
                 .stroke(Color(.darkGray), lineWidth: 5)
                 .frame(width: 53, height: 53)
-                .rotationEffect(.degrees(rotationAngle))
+                .rotationEffect(.degrees(flashcardRotationAngle))
                 .onAppear {
-                    startSpinning()
+                    startFlashcardSpinning()
                 }
             
             VStack(spacing: 5) {
@@ -455,8 +463,13 @@ public struct PDFView: View {
             async let summaryTask = serviceManager.llmInterface.generateSummary(text: pdfText)
             
             // Start flashcard generation in background with proper task management
-            isLoadingFlashcards = true // Set immediately
+            print("🔄 Starting flashcard generation task immediately")
             flashcardTask = Task {
+                print("🔄 Inside flashcard task - setting isLoadingFlashcards = true")
+                await MainActor.run {
+                    isLoadingFlashcards = true
+                }
+                print("🔄 About to call generateFlashcardsInBackground")
                 await generateFlashcardsInBackground()
             }
             
@@ -478,12 +491,16 @@ public struct PDFView: View {
 
     
     private func generateFlashcardsInBackground() async {
+        print("🔄 generateFlashcardsInBackground called")
         guard !currentPDFText.isEmpty else { 
+            print("🔄 PDF text is empty, stopping flashcard generation")
             await MainActor.run {
                 isLoadingFlashcards = false
             }
             return 
         }
+        
+        print("🔄 About to make LLM call for flashcards")
         
         do {
             // Check if task was cancelled before making the expensive LLM call
