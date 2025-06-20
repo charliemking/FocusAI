@@ -84,11 +84,8 @@ public struct FlashcardView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
                 
-                // Main content - properly centered with equal spacing above and below
-                VStack {
-                    Spacer()
-                    Spacer() // Extra spacer to push content down more
-                    
+                // Main content - dynamically centered based on content length
+                GeometryReader { geometry in
                     VStack(spacing: 8) {
                         if isShowingAnswer {
                             ScrollView {
@@ -100,7 +97,7 @@ public struct FlashcardView: View {
                                     .fixedSize(horizontal: false, vertical: true)
                                     .padding(.horizontal, 8)
                             }
-                            .frame(maxHeight: 100)
+                            .frame(maxHeight: min(100, geometry.size.height * 0.6))
                         } else {
                             ScrollView {
                                 Text(currentFlashcard.question)
@@ -111,7 +108,7 @@ public struct FlashcardView: View {
                                     .fixedSize(horizontal: false, vertical: true)
                                     .padding(.horizontal, 8)
                             }
-                            .frame(maxHeight: 100)
+                            .frame(maxHeight: min(100, geometry.size.height * 0.6))
                         }
                         
                         // Tags (if any) - keep with content for better centering
@@ -130,8 +127,8 @@ public struct FlashcardView: View {
                             .padding(.top, 4)
                         }
                     }
-                    
-                    Spacer()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
                 }
                 .padding(.horizontal, 16)
             }
