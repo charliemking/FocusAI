@@ -81,19 +81,27 @@ public struct FlashcardView: View {
                 Spacer()
                 
                 // Card content
-                VStack(spacing: 20) {
+                VStack(spacing: 16) {
                     if isShowingAnswer {
-                        Text(currentFlashcard.answer)
-                            .font(Theme.bodyStyle)
-                            .foregroundColor(Color(.darkGray))
-                            .multilineTextAlignment(.center)
-                            .transition(.opacity)
+                        ScrollView {
+                            Text(currentFlashcard.answer)
+                                .font(.system(size: 14))
+                                .foregroundColor(Color(.darkGray))
+                                .multilineTextAlignment(.center)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxHeight: 80)
                     } else {
-                        Text(currentFlashcard.question)
-                            .font(Theme.titleStyle)
-                            .foregroundColor(Theme.primaryColor)
-                            .multilineTextAlignment(.center)
-                            .transition(.opacity)
+                        ScrollView {
+                            Text(currentFlashcard.question)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(Theme.primaryColor)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxHeight: 80)
                     }
                 }
                 
@@ -116,7 +124,7 @@ public struct FlashcardView: View {
             }
             .padding(24)
         }
-        .frame(minHeight: 200, maxHeight: 250)
+        .frame(minHeight: 150, maxHeight: 180)
         .rotation3DEffect(
             .degrees(flipRotation),
             axis: (x: 0, y: 1, z: 0)
@@ -257,11 +265,18 @@ public struct FlashcardView: View {
     // MARK: - Actions
     
     private func flipCard() {
-        // Change content immediately, then animate the flip
-        isShowingAnswer.toggle()
+        // First, animate the flip to 90 degrees (edge-on)
+        withAnimation(.easeInOut(duration: 0.3)) {
+            flipRotation += 90
+        }
         
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-            flipRotation += 180
+        // At the midpoint, change the content and continue the flip
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            isShowingAnswer.toggle()
+            
+            withAnimation(.easeInOut(duration: 0.3)) {
+                flipRotation += 90
+            }
         }
     }
     

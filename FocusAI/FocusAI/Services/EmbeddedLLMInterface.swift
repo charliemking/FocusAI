@@ -849,14 +849,19 @@ public class EmbeddedLLMInterface: LLMInterface {
     private func buildFlashcardPrompt(text: String) -> String {
         let truncatedText = String(text.prefix(10000))
         return """
-        <|system|>You are an expert educational content creator. Create high-quality flashcards that test key concepts, important facts, and critical understanding. Each flashcard should have a clear, specific question and a comprehensive but concise answer. Focus on the most important information that students need to learn.<|end|>
-        <|user|>Create 5-8 educational flashcards from the following content. Focus on the most important concepts, facts, and ideas that students should remember. Format each flashcard exactly as:
+        <|system|>Create educational flashcards. Format each flashcard exactly as shown in the example.<|end|>
+        <|user|>Create exactly 6 flashcards from this content:
 
-        Q: [Clear, specific question]
-        A: [Comprehensive but concise answer]
+        \(truncatedText)
 
-        Content:
-        \(truncatedText)<|end|>
+        Format each flashcard exactly like this:
+        Q: What is the main topic?
+        A: The main topic is...
+
+        Q: What are the key facts?
+        A: The key facts are...
+
+        Create 6 flashcards now:<|end|>
         <|assistant|>
         """
     }
@@ -902,21 +907,40 @@ public class EmbeddedLLMInterface: LLMInterface {
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             
-            if trimmed.lowercased().hasPrefix("q:") || trimmed.lowercased().hasPrefix("question:") {
+            // Skip empty lines
+            if trimmed.isEmpty { continue }
+            
+            if trimmed.lowercased().hasPrefix("q:") {
                 // Save previous flashcard if complete
-                if let q = currentQuestion, let a = currentAnswer {
+                if let q = currentQuestion, let a = currentAnswer, !q.isEmpty, !a.isEmpty {
                     flashcards.append(Flashcard(question: q, answer: a))
                 }
                 
                 currentQuestion = String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
                 currentAnswer = nil
-            } else if trimmed.lowercased().hasPrefix("a:") || trimmed.lowercased().hasPrefix("answer:") {
+            } else if trimmed.lowercased().hasPrefix("a:") {
                 currentAnswer = String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
+            } else if trimmed.lowercased().hasPrefix("question:") {
+                // Save previous flashcard if complete
+                if let q = currentQuestion, let a = currentAnswer, !q.isEmpty, !a.isEmpty {
+                    flashcards.append(Flashcard(question: q, answer: a))
+                }
+                
+                currentQuestion = String(trimmed.dropFirst(9)).trimmingCharacters(in: .whitespacesAndNewlines)
+                currentAnswer = nil
+            } else if trimmed.lowercased().hasPrefix("answer:") {
+                currentAnswer = String(trimmed.dropFirst(7)).trimmingCharacters(in: .whitespacesAndNewlines)
+            } else if currentQuestion != nil && currentAnswer == nil {
+                // Continue building the question if we haven't found an answer yet
+                currentQuestion! += " " + trimmed
+            } else if currentAnswer != nil {
+                // Continue building the answer
+                currentAnswer! += " " + trimmed
             }
         }
         
         // Add the last flashcard
-        if let q = currentQuestion, let a = currentAnswer {
+        if let q = currentQuestion, let a = currentAnswer, !q.isEmpty, !a.isEmpty {
             flashcards.append(Flashcard(question: q, answer: a))
         }
         
