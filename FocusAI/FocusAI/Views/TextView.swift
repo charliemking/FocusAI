@@ -55,7 +55,7 @@ public struct TextView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     
                                         // Flashcards section
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 0) {
                         // Always show title
                         HStack {
                             Text("Flashcards")
@@ -77,19 +77,13 @@ public struct TextView: View {
                         }
                         
                         if isLoadingFlashcards {
-                            VStack(spacing: 8) {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                Text("Generating flashcards...")
-                                    .font(.caption)
-                                    .foregroundColor(Color(.darkGray))
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            flashcardLoadingView
                         } else if flashcards.isEmpty && !isProcessing {
-                            VStack(spacing: 8) {
+                            VStack(alignment: .leading, spacing: 8) {
                                 Text("Interactive flashcards will appear here")
                                     .font(Theme.bodyStyle)
                                     .foregroundColor(Color(.darkGray))
+                                
                                 if !summary.isEmpty {
                                     Button("Generate Flashcards") {
                                         flashcardTask = Task {
@@ -103,8 +97,10 @@ public struct TextView: View {
                                     .background(Theme.primaryColor)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
+                                
+                                Spacer()
                             }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         } else if !flashcards.isEmpty {
                             FlashcardView(flashcards: flashcards)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -217,9 +213,7 @@ public struct TextView: View {
                 .frame(width: 53, height: 53) // 40 * 1.33 ≈ 53
                 .rotationEffect(.degrees(rotationAngle))
                 .onAppear {
-                    withAnimation(Animation.linear(duration: 1).repeatForever(autoreverses: false)) {
-                        rotationAngle = 360
-                    }
+                    startSpinning()
                 }
             
             VStack(spacing: 5) { // 4 * 1.33 ≈ 5
@@ -236,6 +230,42 @@ public struct TextView: View {
         .background(Color.white)
         .cornerRadius(16) // 12 * 1.33 ≈ 16
         .shadow(color: Color.black.opacity(0.2), radius: 11, x: 0, y: 5) // 8 * 1.33 ≈ 11, 4 * 1.33 ≈ 5
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+    
+    private func startSpinning() {
+        rotationAngle = 0
+        withAnimation(Animation.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+            rotationAngle = 360
+        }
+    }
+    
+    private var flashcardLoadingView: some View {
+        VStack(spacing: 16) {
+            // Custom spinning indicator matching the processing view style exactly
+            Circle()
+                .trim(from: 0, to: 0.8)
+                .stroke(Color(.darkGray), lineWidth: 5)
+                .frame(width: 53, height: 53)
+                .rotationEffect(.degrees(rotationAngle))
+                .onAppear {
+                    startSpinning()
+                }
+            
+            VStack(spacing: 5) {
+                Text("Generating flashcards...")
+                    .font(Theme.processingTitleStyle)
+                    .foregroundColor(Color(.darkGray))
+                
+                Text("Creating interactive study cards")
+                    .font(Theme.processingSubtitleStyle)
+                    .foregroundColor(Color(.darkGray))
+            }
+        }
+        .padding(27)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.2), radius: 11, x: 0, y: 5)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
     
@@ -268,10 +298,11 @@ public struct TextView: View {
         // Start both summary and flashcards in parallel
         async let summaryTask = serviceManager.llmInterface.generateSummary(text: inputText)
         
-        // Start flashcard generation in background with proper task management
-        flashcardTask = Task {
-            await generateFlashcardsInBackground()
-        }
+                    // Start flashcard generation in background with proper task management
+            isLoadingFlashcards = true // Set immediately
+            flashcardTask = Task {
+                await generateFlashcardsInBackground()
+            }
         
         do {
             // Wait for summary (faster, shows first)
@@ -289,10 +320,11 @@ public struct TextView: View {
 
     
     private func generateFlashcardsInBackground() async {
-        guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
-        await MainActor.run {
-            isLoadingFlashcards = true
+        guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { 
+            await MainActor.run {
+                isLoadingFlashcards = false
+            }
+            return 
         }
         
         do {

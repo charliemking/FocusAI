@@ -11,7 +11,7 @@ public struct FlashcardView: View {
     }
     
     public var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 0) {
             if flashcards.isEmpty {
                 Text("No flashcards available")
                     .font(Theme.bodyStyle)
@@ -27,7 +27,6 @@ public struct FlashcardView: View {
                     Spacer()
                 }
                 .padding(.horizontal, 8)
-                .padding(.bottom, 2)
                 
                 // Main flashcard with overlaid controls
                 ZStack {
@@ -49,7 +48,6 @@ public struct FlashcardView: View {
             }
         }
         .padding(.horizontal, 4)
-        .padding(.vertical, 1)
     }
     
     private var flashcardBody: some View {
@@ -62,7 +60,7 @@ public struct FlashcardView: View {
                         .stroke(Theme.primaryColor.opacity(0.2), lineWidth: 1)
                 )
             
-            VStack(spacing: 16) {
+            VStack(spacing: 0) {
                 // Card type indicator
                 HStack {
                     Text(isShowingAnswer ? "ANSWER" : "QUESTION")
@@ -83,54 +81,60 @@ public struct FlashcardView: View {
                         .font(.caption)
                         .foregroundColor(.gray)
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
                 
-                Spacer()
-                
-                // Card content
-                VStack(spacing: 12) {
-                    if isShowingAnswer {
-                        ScrollView {
-                            Text(currentFlashcard.answer)
-                                .font(.system(size: 15))
-                                .foregroundColor(Color(.darkGray))
-                                .multilineTextAlignment(.center)
-                                .lineLimit(nil)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.horizontal, 8)
+                // Main content - properly centered with equal spacing above and below
+                VStack {
+                    Spacer()
+                    Spacer() // Extra spacer to push content down more
+                    
+                    VStack(spacing: 8) {
+                        if isShowingAnswer {
+                            ScrollView {
+                                Text(currentFlashcard.answer)
+                                    .font(.system(size: 15))
+                                    .foregroundColor(Color(.darkGray))
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.horizontal, 8)
+                            }
+                            .frame(maxHeight: 100)
+                        } else {
+                            ScrollView {
+                                Text(currentFlashcard.question)
+                                    .font(.system(size: 17, weight: .medium))
+                                    .foregroundColor(Theme.primaryColor)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.horizontal, 8)
+                            }
+                            .frame(maxHeight: 100)
                         }
-                        .frame(maxHeight: 160)
-                    } else {
-                        ScrollView {
-                            Text(currentFlashcard.question)
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundColor(Theme.primaryColor)
-                                .multilineTextAlignment(.center)
-                                .lineLimit(nil)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.horizontal, 8)
+                        
+                        // Tags (if any) - keep with content for better centering
+                        if !currentFlashcard.tags.isEmpty {
+                            HStack {
+                                ForEach(currentFlashcard.tags.prefix(3), id: \.self) { tag in
+                                    Text(tag)
+                                        .font(.caption)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 2)
+                                        .background(Theme.lightAccent)
+                                        .foregroundColor(Theme.primaryColor)
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            .padding(.top, 4)
                         }
-                        .frame(maxHeight: 160)
                     }
+                    
+                    Spacer()
                 }
-                
-                Spacer()
-                
-                // Tags (if any)
-                if !currentFlashcard.tags.isEmpty {
-                    HStack {
-                        ForEach(currentFlashcard.tags.prefix(3), id: \.self) { tag in
-                            Text(tag)
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(Theme.lightAccent)
-                                .foregroundColor(Theme.primaryColor)
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
+                .padding(.horizontal, 16)
             }
-            .padding(16)
         }
         .frame(minHeight: 180, maxHeight: .infinity)
         .transition(.opacity)
