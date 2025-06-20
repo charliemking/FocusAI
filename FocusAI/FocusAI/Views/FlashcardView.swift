@@ -11,7 +11,7 @@ public struct FlashcardView: View {
     }
     
     public var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 12) {
             if flashcards.isEmpty {
                 Text("No flashcards available")
                     .font(Theme.bodyStyle)
@@ -28,9 +28,9 @@ public struct FlashcardView: View {
                     // Progress bar
                     ProgressView(value: Double(currentIndex + 1), total: Double(flashcards.count))
                         .progressViewStyle(LinearProgressViewStyle(tint: Theme.primaryColor))
-                        .frame(width: 120)
+                        .frame(width: 100)
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 8)
                 
                 // Main flashcard
                 flashcardBody
@@ -38,11 +38,12 @@ public struct FlashcardView: View {
                 // Navigation controls
                 navigationControls
                 
-                // Action buttons
-                actionButtons
+                // Action buttons (more compact)
+                compactActionButtons
             }
         }
-        .padding()
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
     }
     
     private var flashcardBody: some View {
@@ -115,7 +116,7 @@ public struct FlashcardView: View {
             }
             .padding(24)
         }
-        .frame(minHeight: 300, maxHeight: 400)
+        .frame(minHeight: 200, maxHeight: 250)
         .rotation3DEffect(
             .degrees(flipRotation),
             axis: (x: 0, y: 1, z: 0)
@@ -124,7 +125,6 @@ public struct FlashcardView: View {
             flipCard()
         }
         .animation(.spring(response: 0.6, dampingFraction: 0.8), value: flipRotation)
-        .animation(.easeInOut(duration: 0.3), value: isShowingAnswer)
     }
     
     private var navigationControls: some View {
@@ -216,6 +216,40 @@ public struct FlashcardView: View {
         }
     }
     
+    private var compactActionButtons: some View {
+        HStack(spacing: 12) {
+            // Shuffle button (compact)
+            Button(action: shuffleCards) {
+                HStack(spacing: 4) {
+                    Image(systemName: "shuffle")
+                    Text("Shuffle")
+                }
+                .font(.caption)
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Theme.primaryColor)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            
+            // Restart button (compact)
+            Button(action: restartDeck) {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.counterclockwise")
+                    Text("Restart")
+                }
+                .font(.caption)
+                .foregroundColor(Theme.primaryColor)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Theme.primaryColor, lineWidth: 1)
+                )
+            }
+        }
+    }
+    
     private var currentFlashcard: Flashcard {
         flashcards[currentIndex]
     }
@@ -223,15 +257,11 @@ public struct FlashcardView: View {
     // MARK: - Actions
     
     private func flipCard() {
+        // Change content immediately, then animate the flip
+        isShowingAnswer.toggle()
+        
         withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
             flipRotation += 180
-        }
-        
-        // Change content at the midpoint of the flip
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                isShowingAnswer.toggle()
-            }
         }
     }
     

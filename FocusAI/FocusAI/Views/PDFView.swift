@@ -21,6 +21,8 @@ public struct PDFView: View {
     @State private var errorAlert: ErrorAlert?
     @State private var errorMessage: String?
     @State private var rotationAngle = 0.0
+    @State private var isLoadingFlashcards = false
+    @State private var currentPDFText = ""
     
     public init() {}
     
@@ -63,13 +65,32 @@ public struct PDFView: View {
                             .font(Theme.titleStyle)
                             .foregroundColor(Theme.primaryColor)
                         
-                        if isProcessing {
-                            processingView
-                        } else if flashcards.isEmpty {
-                            Text("Interactive flashcards will appear here")
-                                .font(Theme.bodyStyle)
-                                .foregroundColor(Color(.darkGray))
-                        } else {
+                        if isLoadingFlashcards {
+                            VStack(spacing: 8) {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Generating flashcards...")
+                                    .font(.caption)
+                                    .foregroundColor(Color(.darkGray))
+                            }
+                        } else if flashcards.isEmpty && !isProcessing {
+                            VStack(spacing: 8) {
+                                Text("Interactive flashcards will appear here")
+                                    .font(Theme.bodyStyle)
+                                    .foregroundColor(Color(.darkGray))
+                                if !summary.isEmpty {
+                                    Button("Generate Flashcards") {
+                                        generateFlashcardsAsync()
+                                    }
+                                    .font(Theme.subtitleStyle)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Theme.primaryColor)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                            }
+                        } else if !flashcards.isEmpty {
                             FlashcardView(flashcards: flashcards)
                         }
                     }
@@ -347,6 +368,7 @@ public struct PDFView: View {
     
     private func processPDF(_ pdf: PDFDocument) async {
         isProcessing = true
+        flashcards = [] // Reset flashcards
         
         // Wait for services to be initialized
         while !serviceManager.isInitialized && serviceManager.lastError == nil {
@@ -365,17 +387,77 @@ public struct PDFView: View {
         
         do {
             let pdfText = extractTextFromPDF(pdf)
-            summary = try await serviceManager.llmInterface.generateSummary(text: pdfText)
-            flashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: pdfText, count: 5, difficulty: .intermediate)
+            currentPDFText = pdfText
+            
+            // Start both summary and flashcards in parallel
+            async let summaryTask = serviceManager.llmInterface.generateSummary(text: pdfText)
+            async let _ = generateFlashcardsInBackground()
+            
+            // Wait for summary (faster, shows first)
+            summary = try await summaryTask
+            
+            // Flashcards will complete in background and update UI automatically
         } catch {
             errorAlert = ErrorAlert(
                 title: "Processing Error",
-                message: "Error processing PDF: \(error.localizedDescription)"
+                message: "Error generating summary: \(error.localizedDescription)"
             )
-            print("❌ PDF processing error: \(error)")
+            print("❌ Summary generation error: \(error)")
         }
         
         isProcessing = false
+    }
+    
+    private func generateFlashcardsAsync() {
+        guard !currentPDFText.isEmpty else { return }
+        
+        Task {
+            await MainActor.run {
+                isLoadingFlashcards = true
+            }
+            
+            do {
+                let generatedFlashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: currentPDFText, count: 5, difficulty: .intermediate)
+                await MainActor.run {
+                    flashcards = generatedFlashcards
+                    isLoadingFlashcards = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorAlert = ErrorAlert(
+                        title: "Flashcard Error",
+                        message: "Error generating flashcards: \(error.localizedDescription)"
+                    )
+                    isLoadingFlashcards = false
+                }
+                print("❌ Flashcard generation error: \(error)")
+            }
+        }
+    }
+    
+    private func generateFlashcardsInBackground() async {
+        guard !currentPDFText.isEmpty else { return }
+        
+        await MainActor.run {
+            isLoadingFlashcards = true
+        }
+        
+        do {
+            let generatedFlashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: currentPDFText, count: 5, difficulty: .intermediate)
+            await MainActor.run {
+                flashcards = generatedFlashcards
+                isLoadingFlashcards = false
+            }
+        } catch {
+            await MainActor.run {
+                errorAlert = ErrorAlert(
+                    title: "Flashcard Error",
+                    message: "Error generating flashcards: \(error.localizedDescription)"
+                )
+                isLoadingFlashcards = false
+            }
+            print("❌ Flashcard generation error: \(error)")
+        }
     }
     
     private func askQuestion() async {

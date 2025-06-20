@@ -10,6 +10,7 @@ public struct TextView: View {
     @State private var answer = ""
     @State private var errorMessage: String?
     @State private var rotationAngle = 0.0
+    @State private var isLoadingFlashcards = false
     
     public init() {}
     
@@ -52,13 +53,32 @@ public struct TextView: View {
                             .font(Theme.titleStyle)
                             .foregroundColor(Theme.primaryColor)
                         
-                        if isProcessing {
-                            processingView
-                        } else if flashcards.isEmpty {
-                            Text("Interactive flashcards will appear here")
-                                .font(Theme.bodyStyle)
-                                .foregroundColor(Color(.darkGray))
-                        } else {
+                        if isLoadingFlashcards {
+                            VStack(spacing: 8) {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Generating flashcards...")
+                                    .font(.caption)
+                                    .foregroundColor(Color(.darkGray))
+                            }
+                        } else if flashcards.isEmpty && !isProcessing {
+                            VStack(spacing: 8) {
+                                Text("Interactive flashcards will appear here")
+                                    .font(Theme.bodyStyle)
+                                    .foregroundColor(Color(.darkGray))
+                                if !summary.isEmpty {
+                                    Button("Generate Flashcards") {
+                                        generateFlashcardsAsync()
+                                    }
+                                    .font(Theme.subtitleStyle)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Theme.primaryColor)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                            }
+                        } else if !flashcards.isEmpty {
                             FlashcardView(flashcards: flashcards)
                         }
                     }
@@ -199,6 +219,7 @@ public struct TextView: View {
         
         isProcessing = true
         errorMessage = nil
+        flashcards = [] // Reset flashcards
         
         // Wait for services to be initialized
         while !serviceManager.isInitialized && serviceManager.lastError == nil {
@@ -212,15 +233,67 @@ public struct TextView: View {
             return
         }
         
+        // Start both summary and flashcards in parallel
+        async let summaryTask = serviceManager.llmInterface.generateSummary(text: inputText)
+        async let _ = generateFlashcardsInBackground()
+        
         do {
-            summary = try await serviceManager.llmInterface.generateSummary(text: inputText)
-            flashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: inputText, count: 5, difficulty: .intermediate)
+            // Wait for summary (faster, shows first)
+            summary = try await summaryTask
         } catch {
-            errorMessage = "Error processing text: \(error.localizedDescription)"
-            print("❌ Text processing error: \(error)")
+            errorMessage = "Error generating summary: \(error.localizedDescription)"
+            print("❌ Summary generation error: \(error)")
         }
         
         isProcessing = false
+        
+        // Flashcards will complete in background and update UI automatically
+    }
+    
+    private func generateFlashcardsAsync() {
+        guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        Task {
+            await MainActor.run {
+                isLoadingFlashcards = true
+            }
+            
+            do {
+                let generatedFlashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: inputText, count: 5, difficulty: .intermediate)
+                await MainActor.run {
+                    flashcards = generatedFlashcards
+                    isLoadingFlashcards = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Error generating flashcards: \(error.localizedDescription)"
+                    isLoadingFlashcards = false
+                }
+                print("❌ Flashcard generation error: \(error)")
+            }
+        }
+    }
+    
+    private func generateFlashcardsInBackground() async {
+        guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        await MainActor.run {
+            isLoadingFlashcards = true
+        }
+        
+        do {
+            let generatedFlashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: inputText, count: 5, difficulty: .intermediate)
+            await MainActor.run {
+                flashcards = generatedFlashcards
+                isLoadingFlashcards = false
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = "Error generating flashcards: \(error.localizedDescription)"
+                isLoadingFlashcards = false
+            }
+            print("❌ Flashcard generation error: \(error)")
+        }
     }
     
     private func askQuestion() async {
