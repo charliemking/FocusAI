@@ -51,10 +51,6 @@ public struct URLView: View {
                     
                     // Flashcards section
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Flashcards")
-                            .font(Theme.titleStyle)
-                            .foregroundColor(Theme.primaryColor)
-                        
                         if isLoadingFlashcards {
                             VStack(spacing: 8) {
                                 ProgressView()
