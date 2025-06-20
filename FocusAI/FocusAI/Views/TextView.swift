@@ -11,6 +11,7 @@ public struct TextView: View {
     @State private var errorMessage: String?
     @State private var rotationAngle = 0.0
     @State private var isLoadingFlashcards = false
+    @State private var flashcardTask: Task<Void, Never>?
     
     public init() {}
     
@@ -67,9 +68,11 @@ public struct TextView: View {
                                     .font(Theme.bodyStyle)
                                     .foregroundColor(Color(.darkGray))
                                 if !summary.isEmpty {
-                                    Button("Generate Flashcards") {
-                                        generateFlashcardsAsync()
-                                    }
+                                                            Button("Generate Flashcards") {
+                            flashcardTask = Task {
+                                await generateFlashcardsInBackground()
+                            }
+                        }
                                     .font(Theme.subtitleStyle)
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 16)
@@ -221,6 +224,10 @@ public struct TextView: View {
         errorMessage = nil
         flashcards = [] // Reset flashcards
         
+        // Cancel any existing flashcard generation
+        flashcardTask?.cancel()
+        flashcardTask = nil
+        
         // Wait for services to be initialized
         while !serviceManager.isInitialized && serviceManager.lastError == nil {
             try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
@@ -235,7 +242,11 @@ public struct TextView: View {
         
         // Start both summary and flashcards in parallel
         async let summaryTask = serviceManager.llmInterface.generateSummary(text: inputText)
-        async let _ = generateFlashcardsInBackground()
+        
+        // Start flashcard generation in background with proper task management
+        flashcardTask = Task {
+            await generateFlashcardsInBackground()
+        }
         
         do {
             // Wait for summary (faster, shows first)
@@ -250,29 +261,7 @@ public struct TextView: View {
         // Flashcards will complete in background and update UI automatically
     }
     
-    private func generateFlashcardsAsync() {
-        guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
-        Task {
-            await MainActor.run {
-                isLoadingFlashcards = true
-            }
-            
-            do {
-                let generatedFlashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: inputText, count: 5, difficulty: .intermediate)
-                await MainActor.run {
-                    flashcards = generatedFlashcards
-                    isLoadingFlashcards = false
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = "Error generating flashcards: \(error.localizedDescription)"
-                    isLoadingFlashcards = false
-                }
-                print("❌ Flashcard generation error: \(error)")
-            }
-        }
-    }
+
     
     private func generateFlashcardsInBackground() async {
         guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
@@ -282,11 +271,24 @@ public struct TextView: View {
         }
         
         do {
+            // Check if task was cancelled before making the expensive LLM call
+            try Task.checkCancellation()
+            
             let generatedFlashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: inputText, count: 5, difficulty: .intermediate)
+            
+            // Check again after the call in case it was cancelled during generation
+            try Task.checkCancellation()
+            
             await MainActor.run {
                 flashcards = generatedFlashcards
                 isLoadingFlashcards = false
             }
+        } catch is CancellationError {
+            // Task was cancelled, clean up UI state
+            await MainActor.run {
+                isLoadingFlashcards = false
+            }
+            print("🔄 Flashcard generation cancelled")
         } catch {
             await MainActor.run {
                 errorMessage = "Error generating flashcards: \(error.localizedDescription)"
