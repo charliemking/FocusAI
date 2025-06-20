@@ -4,7 +4,7 @@ public struct FlashcardView: View {
     let flashcards: [Flashcard]
     @State private var currentIndex = 0
     @State private var isShowingAnswer = false
-    @State private var flipRotation = 0.0
+
     
     public init(flashcards: [Flashcard]) {
         self.flashcards = flashcards
@@ -32,11 +32,16 @@ public struct FlashcardView: View {
                 }
                 .padding(.horizontal, 8)
                 
-                // Main flashcard
-                flashcardBody
-                
-                // Navigation controls
-                navigationControls
+                // Main flashcard with overlaid navigation
+                ZStack {
+                    flashcardBody
+                    
+                    // Overlaid navigation controls
+                    VStack {
+                        Spacer()
+                        overlaidNavigationControls
+                    }
+                }
                 
                 // Action buttons (more compact)
                 compactActionButtons
@@ -81,27 +86,29 @@ public struct FlashcardView: View {
                 Spacer()
                 
                 // Card content
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     if isShowingAnswer {
                         ScrollView {
                             Text(currentFlashcard.answer)
-                                .font(.system(size: 14))
+                                .font(.system(size: 15))
                                 .foregroundColor(Color(.darkGray))
                                 .multilineTextAlignment(.center)
                                 .lineLimit(nil)
                                 .fixedSize(horizontal: false, vertical: true)
+                                .padding(.horizontal, 8)
                         }
-                        .frame(maxHeight: 80)
+                        .frame(maxHeight: 100)
                     } else {
                         ScrollView {
                             Text(currentFlashcard.question)
-                                .font(.system(size: 16, weight: .medium))
+                                .font(.system(size: 17, weight: .medium))
                                 .foregroundColor(Theme.primaryColor)
                                 .multilineTextAlignment(.center)
                                 .lineLimit(nil)
                                 .fixedSize(horizontal: false, vertical: true)
+                                .padding(.horizontal, 8)
                         }
-                        .frame(maxHeight: 80)
+                        .frame(maxHeight: 100)
                     }
                 }
                 
@@ -122,17 +129,52 @@ public struct FlashcardView: View {
                     }
                 }
             }
-            .padding(24)
+            .padding(20)
         }
-        .frame(minHeight: 150, maxHeight: 180)
-        .rotation3DEffect(
-            .degrees(flipRotation),
-            axis: (x: 0, y: 1, z: 0)
-        )
+        .frame(minHeight: 200, maxHeight: 220)
+        .transition(.opacity)
         .onTapGesture {
             flipCard()
         }
-        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: flipRotation)
+        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: currentIndex)
+    }
+    
+    private var overlaidNavigationControls: some View {
+        HStack(spacing: 20) {
+            // Previous button (compact, overlaid)
+            Button(action: previousCard) {
+                Image(systemName: "chevron.left")
+                    .font(.title2)
+                    .foregroundColor(currentIndex > 0 ? Theme.primaryColor : .gray)
+                    .padding(12)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                    )
+            }
+            .disabled(currentIndex <= 0)
+            .opacity(currentIndex > 0 ? 1.0 : 0.3)
+            
+            Spacer()
+            
+            // Next button (compact, overlaid)
+            Button(action: nextCard) {
+                Image(systemName: "chevron.right")
+                    .font(.title2)
+                    .foregroundColor(currentIndex < flashcards.count - 1 ? Theme.primaryColor : .gray)
+                    .padding(12)
+                    .background(
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                    )
+            }
+            .disabled(currentIndex >= flashcards.count - 1)
+            .opacity(currentIndex < flashcards.count - 1 ? 1.0 : 0.3)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 16)
     }
     
     private var navigationControls: some View {
@@ -265,18 +307,8 @@ public struct FlashcardView: View {
     // MARK: - Actions
     
     private func flipCard() {
-        // First, animate the flip to 90 degrees (edge-on)
         withAnimation(.easeInOut(duration: 0.3)) {
-            flipRotation += 90
-        }
-        
-        // At the midpoint, change the content and continue the flip
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
             isShowingAnswer.toggle()
-            
-            withAnimation(.easeInOut(duration: 0.3)) {
-                flipRotation += 90
-            }
         }
     }
     
@@ -286,7 +318,6 @@ public struct FlashcardView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             currentIndex += 1
             isShowingAnswer = false
-            flipRotation = 0
         }
     }
     
@@ -296,14 +327,12 @@ public struct FlashcardView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             currentIndex -= 1
             isShowingAnswer = false
-            flipRotation = 0
         }
     }
     
     private func resetToQuestion() {
         withAnimation(.easeInOut(duration: 0.3)) {
             isShowingAnswer = false
-            flipRotation = 0
         }
     }
     
@@ -313,7 +342,6 @@ public struct FlashcardView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             currentIndex = 0
             isShowingAnswer = false
-            flipRotation = 0
         }
     }
     
@@ -321,7 +349,6 @@ public struct FlashcardView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             currentIndex = 0
             isShowingAnswer = false
-            flipRotation = 0
         }
     }
 }
