@@ -11,11 +11,12 @@ public struct FlashcardView: View {
     }
     
     public var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 2) {
             if flashcards.isEmpty {
                 Text("No flashcards available")
                     .font(Theme.bodyStyle)
                     .foregroundColor(Color(.darkGray))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 // Current card indicator
                 HStack {
@@ -26,7 +27,7 @@ public struct FlashcardView: View {
                     Spacer()
                 }
                 .padding(.horizontal, 8)
-                .padding(.bottom, 4)
+                .padding(.bottom, 2)
                 
                 // Main flashcard with overlaid controls
                 ZStack {
@@ -44,10 +45,11 @@ public struct FlashcardView: View {
                         Spacer()
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 1)
     }
     
     private var flashcardBody: some View {
@@ -96,7 +98,7 @@ public struct FlashcardView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, 8)
                         }
-                        .frame(maxHeight: 120)
+                        .frame(maxHeight: 160)
                     } else {
                         ScrollView {
                             Text(currentFlashcard.question)
@@ -107,7 +109,7 @@ public struct FlashcardView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, 8)
                         }
-                        .frame(maxHeight: 120)
+                        .frame(maxHeight: 160)
                     }
                 }
                 
@@ -130,7 +132,7 @@ public struct FlashcardView: View {
             }
             .padding(16)
         }
-        .frame(minHeight: 200, maxHeight: 300)
+        .frame(minHeight: 180, maxHeight: .infinity)
         .transition(.opacity)
         .onTapGesture {
             flipCard()

@@ -33,17 +33,22 @@ public struct PDFView: View {
                 // Top row with Summary and Flashcards side by side
                 HStack(spacing: 16) {
                     // Summary section
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Summary")
-                            .font(Theme.titleStyle)
-                            .foregroundColor(Theme.primaryColor)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Summary")
+                                .font(Theme.titleStyle)
+                                .foregroundColor(Theme.primaryColor)
+                            
+                            Spacer()
+                        }
+                        
                         if isProcessing {
                             processingView
                         } else if summary.isEmpty {
                             Text("Summary will appear here")
                                 .font(Theme.bodyStyle)
                                 .foregroundColor(Color(.darkGray))
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         } else {
                             ScrollView {
                                 Text(summary)
@@ -51,6 +56,7 @@ public struct PDFView: View {
                                     .foregroundColor(Color(.darkGray))
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -61,7 +67,7 @@ public struct PDFView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     
                     // Flashcards section
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
                         // Always show title
                         HStack {
                             Text("Flashcards")
@@ -90,17 +96,18 @@ public struct PDFView: View {
                                     .font(.caption)
                                     .foregroundColor(Color(.darkGray))
                             }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                         } else if flashcards.isEmpty && !isProcessing {
                             VStack(spacing: 8) {
                                 Text("Interactive flashcards will appear here")
                                     .font(Theme.bodyStyle)
                                     .foregroundColor(Color(.darkGray))
                                 if !summary.isEmpty {
-                                                            Button("Generate Flashcards") {
-                            flashcardTask = Task {
-                                await generateFlashcardsInBackground()
-                            }
-                        }
+                                    Button("Generate Flashcards") {
+                                        flashcardTask = Task {
+                                            await generateFlashcardsInBackground()
+                                        }
+                                    }
                                     .font(Theme.subtitleStyle)
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 16)
@@ -109,8 +116,10 @@ public struct PDFView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
                             }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                         } else if !flashcards.isEmpty {
                             FlashcardView(flashcards: flashcards)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
