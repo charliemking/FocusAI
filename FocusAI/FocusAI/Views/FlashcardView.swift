@@ -11,26 +11,31 @@ public struct FlashcardView: View {
     }
     
     public var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             if flashcards.isEmpty {
                 Text("No flashcards available")
                     .font(Theme.bodyStyle)
                     .foregroundColor(Color(.darkGray))
             } else {
-                // Progress indicator
+                // Compact header - title and counter combined
                 HStack {
-                    Text("Card \(currentIndex + 1) of \(flashcards.count)")
-                        .font(Theme.subtitleStyle)
+                    Text("Flashcards")
+                        .font(Theme.titleStyle)
                         .foregroundColor(Theme.primaryColor)
                     
                     Spacer()
                     
-                    // Progress bar
-                    ProgressView(value: Double(currentIndex + 1), total: Double(flashcards.count))
-                        .progressViewStyle(LinearProgressViewStyle(tint: Theme.primaryColor))
-                        .frame(width: 100)
+                    Text("Card \(currentIndex + 1) of \(flashcards.count)")
+                        .font(Theme.captionStyle)
+                        .foregroundColor(.secondary)
                 }
                 .padding(.horizontal, 8)
+                
+                // Progress bar (full width)
+                ProgressView(value: Double(currentIndex + 1), total: Double(flashcards.count))
+                    .progressViewStyle(LinearProgressViewStyle(tint: Theme.primaryColor))
+                    .frame(height: 3)
+                    .padding(.horizontal, 8)
                 
                 // Main flashcard with overlaid navigation
                 ZStack {
@@ -47,8 +52,8 @@ public struct FlashcardView: View {
                 compactActionButtons
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
     }
     
     private var flashcardBody: some View {
@@ -131,7 +136,7 @@ public struct FlashcardView: View {
             }
             .padding(20)
         }
-        .frame(minHeight: 200, maxHeight: 220)
+        .frame(minHeight: 180, maxHeight: 200)
         .transition(.opacity)
         .onTapGesture {
             flipCard()
