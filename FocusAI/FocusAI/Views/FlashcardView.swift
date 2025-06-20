@@ -11,7 +11,7 @@ public struct FlashcardView: View {
     }
     
     public var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             if flashcards.isEmpty {
                 Text("No flashcards available")
                     .font(Theme.bodyStyle)
@@ -30,6 +30,7 @@ public struct FlashcardView: View {
                         .foregroundColor(.secondary)
                 }
                 .padding(.horizontal, 8)
+                .padding(.bottom, 8)
                 
                 // Progress bar (full width)
                 ProgressView(value: Double(currentIndex + 1), total: Double(flashcards.count))
@@ -105,7 +106,7 @@ public struct FlashcardView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, 8)
                         }
-                        .frame(maxHeight: 140)
+                        .frame(maxHeight: 120)
                     } else {
                         ScrollView {
                             Text(currentFlashcard.question)
@@ -116,7 +117,7 @@ public struct FlashcardView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, 8)
                         }
-                        .frame(maxHeight: 140)
+                        .frame(maxHeight: 120)
                     }
                 }
                 
@@ -137,9 +138,9 @@ public struct FlashcardView: View {
                     }
                 }
             }
-            .padding(20)
+            .padding(16)
         }
-        .frame(minHeight: 240, maxHeight: 280)
+        .frame(minHeight: 200, maxHeight: 300)
         .transition(.opacity)
         .onTapGesture {
             flipCard()
