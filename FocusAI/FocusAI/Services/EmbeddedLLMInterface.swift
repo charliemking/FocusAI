@@ -899,6 +899,64 @@ public class EmbeddedLLMInterface: LLMInterface {
     
     private func parseFlashcards(from text: String) -> [Flashcard] {
         var flashcards: [Flashcard] = []
+        
+        // First, try regex-based parsing for better reliability
+        let patterns = [
+            // Pattern 1: Q: ... A: ...
+            "Q:\\s*(.+?)\\s*A:\\s*(.+?)(?=Q:|$)",
+            // Pattern 2: Question: ... Answer: ...
+            "Question:\\s*(.+?)\\s*Answer:\\s*(.+?)(?=Question:|$)",
+            // Pattern 3: Numbered format 1. Q: ... A: ...
+            "\\d+\\.\\s*Q:\\s*(.+?)\\s*A:\\s*(.+?)(?=\\d+\\.|$)"
+        ]
+        
+        for pattern in patterns {
+            let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators])
+            let matches = regex?.matches(in: text, options: [], range: NSRange(location: 0, length: text.utf16.count)) ?? []
+            
+            for match in matches {
+                if match.numberOfRanges >= 3 {
+                    let questionRange = match.range(at: 1)
+                    let answerRange = match.range(at: 2)
+                    
+                    if let questionNSRange = Range(questionRange, in: text),
+                       let answerNSRange = Range(answerRange, in: text) {
+                        let question = String(text[questionNSRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                        let answer = String(text[answerNSRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                        
+                        if !question.isEmpty && !answer.isEmpty && question.count > 5 && answer.count > 5 {
+                            flashcards.append(Flashcard(question: question, answer: answer))
+                        }
+                    }
+                }
+            }
+            
+            // If we found flashcards with this pattern, use them
+            if !flashcards.isEmpty {
+                break
+            }
+        }
+        
+        // Fallback to line-by-line parsing if regex failed
+        if flashcards.isEmpty {
+            flashcards = parseFlashcardsLineByLine(from: text)
+        }
+        
+        // Clean up the flashcards
+        return flashcards.map { flashcard in
+            let cleanQuestion = flashcard.question
+                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let cleanAnswer = flashcard.answer
+                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            return Flashcard(question: cleanQuestion, answer: cleanAnswer, tags: flashcard.tags)
+        }.filter { !$0.question.isEmpty && !$0.answer.isEmpty }
+    }
+    
+    private func parseFlashcardsLineByLine(from text: String) -> [Flashcard] {
+        var flashcards: [Flashcard] = []
         let lines = text.components(separatedBy: .newlines)
         
         var currentQuestion: String?
