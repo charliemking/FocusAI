@@ -340,11 +340,28 @@ public class EmbeddedLLMInterface: LLMInterface {
         
         do {
             let startTime = Date()
-            let response = try await generateText(prompt: prompt, maxTokens: 1000)
+            let response = try await generateText(prompt: prompt, maxTokens: 1500) // Increased from 1000
             let duration = Date().timeIntervalSince(startTime)
+            
+            // Debug logging to see what we're getting
+            logger.info("🔍 Raw flashcard response (\(response.count) chars): \(String(response.prefix(200)))...")
+            
             let flashcards = parseFlashcards(from: response)
             
+            // Debug logging for parsing results
+            logger.info("🎯 Parsed \(flashcards.count) flashcards from response")
+            
             if flashcards.isEmpty {
+                logger.warning("⚠️ No flashcards parsed from response, trying enhanced parsing...")
+                let enhancedFlashcards = parseFlashcardsEnhanced(from: response)
+                
+                if !enhancedFlashcards.isEmpty {
+                    logger.info("✅ Enhanced parsing found \(enhancedFlashcards.count) flashcards")
+                    recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: "Generated \(enhancedFlashcards.count) flashcards (enhanced parsing)", 
+                                        duration: duration, usedFallback: false, fallbackReason: nil)
+                    return enhancedFlashcards
+                }
+                
                 let fallbackFlashcards = createFallbackFlashcards(from: text)
                 recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: "Generated \(fallbackFlashcards.count) fallback flashcards", 
                                     duration: duration, usedFallback: true, fallbackReason: "No flashcards parsed from response")
@@ -849,20 +866,20 @@ public class EmbeddedLLMInterface: LLMInterface {
     private func buildFlashcardPrompt(text: String) -> String {
         let truncatedText = String(text.prefix(10000))
         return """
-        <|system|>Create educational flashcards. Format each flashcard exactly as shown in the example.<|end|>
-        <|user|>Create exactly 6 flashcards from this content:
+        <|system|>You are creating educational flashcards. You must format each flashcard exactly as shown in the example. Use the exact format with Q: and A: prefixes.<|end|>
+        <|user|>Create exactly 5-7 flashcards from this content:
 
         \(truncatedText)
 
-        Format each flashcard exactly like this:
-        Q: What is the main topic?
-        A: The main topic is...
+        You must format each flashcard exactly like this example:
+        Q: What is the main concept discussed?
+        A: The main concept is artificial intelligence, which refers to machines that can perform tasks requiring human intelligence.
 
-        Q: What are the key facts?
-        A: The key facts are...
+        Q: What are the key benefits mentioned?
+        A: The key benefits include improved efficiency, automated decision-making, and enhanced data analysis capabilities.
 
-        Create 6 flashcards now:<|end|>
-        <|assistant|>
+        Important: Use only Q: and A: prefixes. Do not use numbers, bullets, or other formatting. Create 5-7 flashcards now:<|end|>
+        <|assistant|>Q:
         """
     }
     
@@ -900,29 +917,39 @@ public class EmbeddedLLMInterface: LLMInterface {
     private func parseFlashcards(from text: String) -> [Flashcard] {
         var flashcards: [Flashcard] = []
         
+        // Clean the text first - remove system tokens and extra content
+        let cleanedText = text
+            .replacingOccurrences(of: "<\\|[^|]+\\|>", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "Create exactly \\d+ flashcards.*?:", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        
         // First, try regex-based parsing for better reliability
         let patterns = [
-            // Pattern 1: Q: ... A: ...
-            "Q:\\s*(.+?)\\s*A:\\s*(.+?)(?=Q:|$)",
+            // Pattern 1: Q: ... A: ... (with multiline support)
+            "Q:\\s*([^\\n]+(?:\\n(?!Q:|A:)[^\\n]*)*?)\\s*A:\\s*([^\\n]+(?:\\n(?!Q:|A:)[^\\n]*)*?)(?=\\s*Q:|$)",
             // Pattern 2: Question: ... Answer: ...
-            "Question:\\s*(.+?)\\s*Answer:\\s*(.+?)(?=Question:|$)",
+            "Question:\\s*([^\\n]+(?:\\n(?!Question:|Answer:)[^\\n]*)*?)\\s*Answer:\\s*([^\\n]+(?:\\n(?!Question:|Answer:)[^\\n]*)*?)(?=\\s*Question:|$)",
             // Pattern 3: Numbered format 1. Q: ... A: ...
-            "\\d+\\.\\s*Q:\\s*(.+?)\\s*A:\\s*(.+?)(?=\\d+\\.|$)"
+            "\\d+\\.\\s*Q:\\s*([^\\n]+(?:\\n(?!\\d+\\.|Q:|A:)[^\\n]*)*?)\\s*A:\\s*([^\\n]+(?:\\n(?!\\d+\\.|Q:|A:)[^\\n]*)*?)(?=\\s*\\d+\\.|$)"
         ]
         
         for pattern in patterns {
             let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators])
-            let matches = regex?.matches(in: text, options: [], range: NSRange(location: 0, length: text.utf16.count)) ?? []
+            let matches = regex?.matches(in: cleanedText, options: [], range: NSRange(location: 0, length: cleanedText.utf16.count)) ?? []
             
             for match in matches {
                 if match.numberOfRanges >= 3 {
                     let questionRange = match.range(at: 1)
                     let answerRange = match.range(at: 2)
                     
-                    if let questionNSRange = Range(questionRange, in: text),
-                       let answerNSRange = Range(answerRange, in: text) {
-                        let question = String(text[questionNSRange]).trimmingCharacters(in: .whitespacesAndNewlines)
-                        let answer = String(text[answerNSRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if let questionNSRange = Range(questionRange, in: cleanedText),
+                       let answerNSRange = Range(answerRange, in: cleanedText) {
+                        let question = String(cleanedText[questionNSRange])
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                        let answer = String(cleanedText[answerNSRange])
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
                         
                         if !question.isEmpty && !answer.isEmpty && question.count > 5 && answer.count > 5 {
                             flashcards.append(Flashcard(question: question, answer: answer))
@@ -939,10 +966,10 @@ public class EmbeddedLLMInterface: LLMInterface {
         
         // Fallback to line-by-line parsing if regex failed
         if flashcards.isEmpty {
-            flashcards = parseFlashcardsLineByLine(from: text)
+            flashcards = parseFlashcardsLineByLine(from: cleanedText)
         }
         
-        // Clean up the flashcards
+        // Final cleanup and validation
         return flashcards.map { flashcard in
             let cleanQuestion = flashcard.question
                 .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
@@ -952,7 +979,59 @@ public class EmbeddedLLMInterface: LLMInterface {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             
             return Flashcard(question: cleanQuestion, answer: cleanAnswer, tags: flashcard.tags)
-        }.filter { !$0.question.isEmpty && !$0.answer.isEmpty }
+        }.filter { $0.question.count >= 5 && $0.answer.count >= 5 }
+    }
+    
+    // Enhanced parsing method for when standard parsing fails
+    private func parseFlashcardsEnhanced(from text: String) -> [Flashcard] {
+        var flashcards: [Flashcard] = []
+        
+        // Try to find any Q/A patterns more aggressively
+        let lines = text.components(separatedBy: .newlines)
+        var currentQuestion: String?
+        var currentAnswer: String?
+        var collectingAnswer = false
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty { continue }
+            
+            // Look for question indicators
+            if trimmed.range(of: "^(Q:|Question:|\\d+\\.\\s*Q:)", options: [.regularExpression, .caseInsensitive]) != nil {
+                // Save previous flashcard
+                if let q = currentQuestion, let a = currentAnswer, q.count > 5, a.count > 5 {
+                    flashcards.append(Flashcard(question: q, answer: a))
+                }
+                
+                // Extract question
+                currentQuestion = trimmed
+                    .replacingOccurrences(of: "^(Q:|Question:|\\d+\\.\\s*Q:)\\s*", with: "", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                currentAnswer = nil
+                collectingAnswer = false
+                
+            } else if trimmed.range(of: "^(A:|Answer:)", options: [.regularExpression, .caseInsensitive]) != nil {
+                // Extract answer
+                currentAnswer = trimmed
+                    .replacingOccurrences(of: "^(A:|Answer:)\\s*", with: "", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                collectingAnswer = true
+                
+            } else if collectingAnswer && currentAnswer != nil {
+                // Continue building answer
+                currentAnswer! += " " + trimmed
+            } else if currentQuestion != nil && currentAnswer == nil {
+                // Continue building question
+                currentQuestion! += " " + trimmed
+            }
+        }
+        
+        // Add the last flashcard
+        if let q = currentQuestion, let a = currentAnswer, q.count > 5, a.count > 5 {
+            flashcards.append(Flashcard(question: q, answer: a))
+        }
+        
+        return flashcards
     }
     
     private func parseFlashcardsLineByLine(from text: String) -> [Flashcard] {
