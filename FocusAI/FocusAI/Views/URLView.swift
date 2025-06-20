@@ -51,6 +51,26 @@ public struct URLView: View {
                     
                     // Flashcards section
                     VStack(alignment: .leading, spacing: 8) {
+                        // Always show title
+                        HStack {
+                            Text("Flashcards")
+                                .font(Theme.titleStyle)
+                                .foregroundColor(Theme.primaryColor)
+                            
+                            Spacer()
+                            
+                            // Show count in corner when flashcards exist
+                            if !flashcards.isEmpty {
+                                Text("\(flashcards.count) cards")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.gray.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        
                         if isLoadingFlashcards {
                             VStack(spacing: 8) {
                                 ProgressView()

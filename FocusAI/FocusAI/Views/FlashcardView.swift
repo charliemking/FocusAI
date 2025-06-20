@@ -17,26 +17,16 @@ public struct FlashcardView: View {
                     .font(Theme.bodyStyle)
                     .foregroundColor(Color(.darkGray))
             } else {
-                // Compact header - title and counter combined
+                // Current card indicator
                 HStack {
-                    Text("Flashcards")
-                        .font(Theme.titleStyle)
-                        .foregroundColor(Theme.primaryColor)
-                    
-                    Spacer()
-                    
                     Text("Card \(currentIndex + 1) of \(flashcards.count)")
                         .font(Theme.captionStyle)
                         .foregroundColor(.secondary)
+                    
+                    Spacer()
                 }
                 .padding(.horizontal, 8)
-                .padding(.bottom, 8)
-                
-                // Progress bar (full width)
-                ProgressView(value: Double(currentIndex + 1), total: Double(flashcards.count))
-                    .progressViewStyle(LinearProgressViewStyle(tint: Theme.primaryColor))
-                    .frame(height: 3)
-                    .padding(.horizontal, 8)
+                .padding(.bottom, 4)
                 
                 // Main flashcard with overlaid controls
                 ZStack {
