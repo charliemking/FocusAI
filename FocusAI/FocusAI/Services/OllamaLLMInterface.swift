@@ -101,46 +101,62 @@ public class OllamaLLMInterface: LLMInterface {
             throw LLMError.modelNotLoaded
         }
         
+        let requestId = UUID().uuidString.prefix(8)
+        logger.info("🎯 Starting flashcard generation request \(requestId)")
+        
         let prompt = buildFlashcardPrompt(text: text)
+        logger.info("📝 Request \(requestId) prompt: \(String(prompt.prefix(300)))...")
+        
         let startTime = Date()
         
         do {
             let response = try await generateText(prompt: prompt, maxTokens: 1500)
             let duration = Date().timeIntervalSince(startTime)
             
-            logger.info("🔍 Raw flashcard response (\(response.count) chars): \(String(response.prefix(200)))...")
+            logger.info("🔍 Request \(requestId) raw flashcard response (\(response.count) chars): \(String(response.prefix(200)))...")
             
             let flashcards = parseFlashcards(from: response)
             
             if flashcards.isEmpty {
-                logger.warning("⚠️ No flashcards parsed, trying enhanced parsing...")
+                logger.warning("⚠️ Request \(requestId) no flashcards parsed, trying enhanced parsing...")
                 let enhancedFlashcards = parseFlashcardsEnhanced(from: response)
                 
                 if !enhancedFlashcards.isEmpty {
                     recordPerformanceMetric("Flashcard Generation", duration: duration, tokenCount: response.split(separator: " ").count)
-                    logger.info("✅ Generated \(enhancedFlashcards.count) flashcards (enhanced parsing) in \(String(format: "%.2f", duration))s")
+                    logger.info("✅ Request \(requestId) generated \(enhancedFlashcards.count) flashcards (enhanced parsing) in \(String(format: "%.2f", duration))s")
                     return enhancedFlashcards
                 }
                 
                 // Try regex-based parsing as final fallback
-                logger.warning("⚠️ Enhanced parsing failed, trying regex parsing...")
+                logger.warning("⚠️ Request \(requestId) enhanced parsing failed, trying regex parsing...")
                 let regexFlashcards = parseFlashcardsWithRegex(from: response)
                 
                 if !regexFlashcards.isEmpty {
                     recordPerformanceMetric("Flashcard Generation", duration: duration, tokenCount: response.split(separator: " ").count)
-                    logger.info("✅ Generated \(regexFlashcards.count) flashcards (regex parsing) in \(String(format: "%.2f", duration))s")
+                    logger.info("✅ Request \(requestId) generated \(regexFlashcards.count) flashcards (regex parsing) in \(String(format: "%.2f", duration))s")
                     return regexFlashcards
                 }
                 
+                // Try simple text-based parsing as final fallback
+                logger.warning("⚠️ Request \(requestId) regex parsing failed, trying simple text parsing...")
+                let simpleFlashcards = parseFlashcardsSimple(from: response)
+                
+                if !simpleFlashcards.isEmpty {
+                    recordPerformanceMetric("Flashcard Generation", duration: duration, tokenCount: response.split(separator: " ").count)
+                    logger.info("✅ Request \(requestId) generated \(simpleFlashcards.count) flashcards (simple parsing) in \(String(format: "%.2f", duration))s")
+                    return simpleFlashcards
+                }
+                
+                logger.error("❌ Request \(requestId) all parsing methods failed. Response was: \(response)")
                 throw LLMError.processingFailed("No flashcards could be parsed from response")
             }
             
             recordPerformanceMetric("Flashcard Generation", duration: duration, tokenCount: response.split(separator: " ").count)
-            logger.info("✅ Generated \(flashcards.count) flashcards successfully in \(String(format: "%.2f", duration))s")
+            logger.info("✅ Request \(requestId) generated \(flashcards.count) flashcards successfully in \(String(format: "%.2f", duration))s")
             return flashcards
             
         } catch {
-            logger.error("❌ Flashcard generation failed: \(error)")
+            logger.error("❌ Request \(requestId) flashcard generation failed: \(error)")
             throw error
         }
     }
@@ -214,11 +230,14 @@ public class OllamaLLMInterface: LLMInterface {
             "model": modelName,
             "prompt": prompt,
             "stream": false,
+            "context": [], // Reset context to ensure no conversation memory
             "options": [
                 "num_predict": maxTokens,
                 "temperature": 0.7,
                 "top_p": 0.9,
-                "repeat_penalty": 1.1
+                "repeat_penalty": 1.1,
+                "num_ctx": 4096, // Set context window
+                "num_thread": 4 // Optimize for performance
             ]
         ]
         
@@ -271,14 +290,16 @@ public class OllamaLLMInterface: LLMInterface {
         let truncatedText = String(text.prefix(3000))
         
         return """
-        <|system|>You are a flashcard creator. Create exactly 3-5 flashcards from the provided text. Use ONLY the Q: and A: format. Do not add any other text or explanations.<|end|>
-        <|user|>Create flashcards from this text. Use this exact format:
+        <|system|>You are a flashcard creator. This is a new, independent request. Create exactly 3-5 unique flashcards based solely on the provided text. Use ONLY the Q: and A: format. Start each question with "Q:" and each answer with "A:". Do not reference any previous conversations or flashcards. Focus only on the current text provided.<|end|>
+        <|user|>Create new flashcards from this text. Use this exact format for each flashcard:
 
-        Q: [Question]
-        A: [Answer]
+        Q: [Question about the text]
+        A: [Answer based on the text]
+
+        Create 3-5 flashcards. Each question should be different and test understanding of key concepts from the text.
 
         Text: \(truncatedText)<|end|>
-        <|assistant|>Q: 
+        <|assistant|>
         """
     }
     
@@ -304,19 +325,25 @@ public class OllamaLLMInterface: LLMInterface {
     private func parseFlashcards(from text: String) -> [Flashcard] {
         logger.info("🔍 Raw response to parse: \(text.prefix(500))...")
         
-        let lines = text.components(separatedBy: .newlines)
+        // Clean the text first
+        let cleanedText = cleanGeneratedText(text)
+        logger.info("🧹 Cleaned text: \(cleanedText.prefix(300))...")
+        
+        let lines = cleanedText.components(separatedBy: .newlines)
         var flashcards: [Flashcard] = []
         var currentQuestion = ""
         var currentAnswer = ""
         var collectingAnswer = false
         
-        for line in lines {
+        for (index, line) in lines.enumerated() {
             let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
             
             // Skip empty lines
             if trimmedLine.isEmpty { continue }
             
-            if trimmedLine.hasPrefix("Q:") {
+            logger.info("📝 Processing line \(index): '\(trimmedLine)'")
+            
+            if trimmedLine.hasPrefix("Q:") || trimmedLine.lowercased().hasPrefix("question:") {
                 // Save previous flashcard if we have one
                 if !currentQuestion.isEmpty && !currentAnswer.isEmpty {
                     flashcards.append(Flashcard(
@@ -327,18 +354,37 @@ public class OllamaLLMInterface: LLMInterface {
                     logger.info("✅ Parsed flashcard: Q: \(currentQuestion) | A: \(currentAnswer)")
                 }
                 
-                currentQuestion = String(trimmedLine.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
+                // Extract question
+                if trimmedLine.hasPrefix("Q:") {
+                    currentQuestion = String(trimmedLine.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
+                } else if trimmedLine.lowercased().hasPrefix("question:") {
+                    currentQuestion = String(trimmedLine.dropFirst(9)).trimmingCharacters(in: .whitespacesAndNewlines)
+                }
                 currentAnswer = ""
                 collectingAnswer = false
-            } else if trimmedLine.hasPrefix("A:") {
-                currentAnswer = String(trimmedLine.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
+                logger.info("🔍 Found question: '\(currentQuestion)'")
+            } else if trimmedLine.hasPrefix("A:") || trimmedLine.lowercased().hasPrefix("answer:") {
+                // Extract answer
+                if trimmedLine.hasPrefix("A:") {
+                    currentAnswer = String(trimmedLine.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
+                } else if trimmedLine.lowercased().hasPrefix("answer:") {
+                    currentAnswer = String(trimmedLine.dropFirst(7)).trimmingCharacters(in: .whitespacesAndNewlines)
+                }
                 collectingAnswer = true
-            } else if collectingAnswer && !trimmedLine.hasPrefix("Q:") && !trimmedLine.hasPrefix("A:") {
+                logger.info("🔍 Found answer: '\(currentAnswer)'")
+            } else if collectingAnswer && !trimmedLine.hasPrefix("Q:") && !trimmedLine.hasPrefix("A:") && !trimmedLine.lowercased().hasPrefix("question:") && !trimmedLine.lowercased().hasPrefix("answer:") {
                 // This is a continuation of the answer
                 if !currentAnswer.isEmpty {
                     currentAnswer += " " + trimmedLine
                 } else {
                     currentAnswer = trimmedLine
+                }
+                logger.info("🔍 Extended answer: '\(currentAnswer)'")
+            } else if !currentQuestion.isEmpty && !collectingAnswer && !trimmedLine.hasPrefix("A:") && !trimmedLine.lowercased().hasPrefix("answer:") {
+                // This might be a continuation of the question
+                if !trimmedLine.hasPrefix("Q:") && !trimmedLine.lowercased().hasPrefix("question:") {
+                    currentQuestion += " " + trimmedLine
+                    logger.info("🔍 Extended question: '\(currentQuestion)'")
                 }
             }
         }
@@ -466,6 +512,60 @@ public class OllamaLLMInterface: LLMInterface {
         }
         
         logger.info("📚 Regex total flashcards parsed: \(flashcards.count)")
+        return flashcards
+    }
+    
+    private func parseFlashcardsSimple(from text: String) -> [Flashcard] {
+        logger.info("🔍 Simple parsing of response...")
+        
+        var flashcards: [Flashcard] = []
+        let cleanedText = cleanGeneratedText(text)
+        
+        // Split by potential question/answer separators
+        let chunks = cleanedText.components(separatedBy: CharacterSet(charactersIn: "\n\n"))
+        
+        for chunk in chunks {
+            let lines = chunk.components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            
+            if lines.count >= 2 {
+                // Look for any pattern that might be a question/answer pair
+                var question = ""
+                var answer = ""
+                
+                for i in 0..<lines.count {
+                    let line = lines[i]
+                    
+                    // If line contains a question mark, treat it as a question
+                    if line.contains("?") && question.isEmpty {
+                        question = line.replacingOccurrences(of: "^(Q:|Question:|\\d+\\.|\\*\\*Q:|\\*\\*Question:)\\s*", with: "", options: .regularExpression)
+                        // Next line might be the answer
+                        if i + 1 < lines.count {
+                            answer = lines[i + 1].replacingOccurrences(of: "^(A:|Answer:|\\*\\*A:|\\*\\*Answer:)\\s*", with: "", options: .regularExpression)
+                        }
+                        break
+                    }
+                }
+                
+                // If we couldn't find a question with ?, try first two lines
+                if question.isEmpty && lines.count >= 2 {
+                    question = lines[0].replacingOccurrences(of: "^(Q:|Question:|\\d+\\.|\\*\\*Q:|\\*\\*Question:)\\s*", with: "", options: .regularExpression)
+                    answer = lines[1].replacingOccurrences(of: "^(A:|Answer:|\\*\\*A:|\\*\\*Answer:)\\s*", with: "", options: .regularExpression)
+                }
+                
+                if !question.isEmpty && !answer.isEmpty && question.count > 5 && answer.count > 5 {
+                    flashcards.append(Flashcard(
+                        question: question,
+                        answer: answer,
+                        tags: ["ai-generated", "ollama", "simple-parsed"]
+                    ))
+                    logger.info("✅ Simple parsed flashcard: Q: \(question) | A: \(answer)")
+                }
+            }
+        }
+        
+        logger.info("📚 Simple total flashcards parsed: \(flashcards.count)")
         return flashcards
     }
     

@@ -87,44 +87,46 @@ public struct FlashcardView: View {
                 // Main content - dynamically centered based on content length
                 GeometryReader { geometry in
                     VStack(spacing: 8) {
-                        if isShowingAnswer {
-                            ScrollView {
-                                Text(currentFlashcard.answer)
-                                    .font(.system(size: 15))
-                                    .foregroundColor(Color(.darkGray))
-                                    .multilineTextAlignment(.center)
-                                    .lineLimit(nil)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .padding(.horizontal, 8)
-                            }
-                            .frame(maxHeight: min(100, geometry.size.height * 0.6))
-                        } else {
-                            ScrollView {
-                                Text(currentFlashcard.question)
-                                    .font(.system(size: 17, weight: .medium))
-                                    .foregroundColor(Theme.primaryColor)
-                                    .multilineTextAlignment(.center)
-                                    .lineLimit(nil)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .padding(.horizontal, 8)
-                            }
-                            .frame(maxHeight: min(100, geometry.size.height * 0.6))
-                        }
-                        
-                        // Tags (if any) - keep with content for better centering
-                        if !currentFlashcard.tags.isEmpty {
-                            HStack {
-                                ForEach(currentFlashcard.tags.prefix(3), id: \.self) { tag in
-                                    Text(tag)
-                                        .font(.caption)
+                        if let flashcard = currentFlashcard {
+                            if isShowingAnswer {
+                                ScrollView {
+                                    Text(flashcard.answer)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(Color(.darkGray))
+                                        .multilineTextAlignment(.center)
+                                        .lineLimit(nil)
+                                        .fixedSize(horizontal: false, vertical: true)
                                         .padding(.horizontal, 8)
-                                        .padding(.vertical, 2)
-                                        .background(Theme.lightAccent)
-                                        .foregroundColor(Theme.primaryColor)
-                                        .clipShape(Capsule())
                                 }
+                                .frame(maxHeight: min(100, geometry.size.height * 0.6))
+                            } else {
+                                ScrollView {
+                                    Text(flashcard.question)
+                                        .font(.system(size: 17, weight: .medium))
+                                        .foregroundColor(Theme.primaryColor)
+                                        .multilineTextAlignment(.center)
+                                        .lineLimit(nil)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .padding(.horizontal, 8)
+                                }
+                                .frame(maxHeight: min(100, geometry.size.height * 0.6))
                             }
-                            .padding(.top, 4)
+                            
+                            // Tags (if any) - keep with content for better centering
+                            if !flashcard.tags.isEmpty {
+                                HStack {
+                                    ForEach(flashcard.tags.prefix(3), id: \.self) { tag in
+                                        Text(tag)
+                                            .font(.caption)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 2)
+                                            .background(Theme.lightAccent)
+                                            .foregroundColor(Theme.primaryColor)
+                                            .clipShape(Capsule())
+                                    }
+                                }
+                                .padding(.top, 4)
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -348,8 +350,9 @@ public struct FlashcardView: View {
         }
     }
     
-    private var currentFlashcard: Flashcard {
-        flashcards[currentIndex]
+    private var currentFlashcard: Flashcard? {
+        guard !flashcards.isEmpty && currentIndex < flashcards.count else { return nil }
+        return flashcards[currentIndex]
     }
     
     // MARK: - Actions
