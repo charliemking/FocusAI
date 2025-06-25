@@ -1,11 +1,18 @@
 import Foundation
 import PDFKit
 
+public enum LLMBackend {
+    case embedded
+    case ollama
+    case stub
+}
+
 public class ServiceManager: ObservableObject {
     // MARK: - Services
     public let llmInterface: LLMInterface
     public let documentProcessor: DocumentProcessor
     public let flashcardGenerator: FlashcardGenerator
+    public let backend: LLMBackend
     
     // MARK: - State
     @Published public var isInitialized = false
@@ -15,8 +22,9 @@ public class ServiceManager: ObservableObject {
     
     // MARK: - Initialization
     
-    public init(useStubServices: Bool = false) {
-        print("🔧 ServiceManager init called with useStubServices: \(useStubServices)")
+    public init(useStubServices: Bool = false, backend: LLMBackend = .ollama) {
+        self.backend = backend
+        print("🔧 ServiceManager init called with useStubServices: \(useStubServices), backend: \(backend)")
         
         if useStubServices {
             // Use stub implementations for development
@@ -26,12 +34,31 @@ public class ServiceManager: ObservableObject {
             self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
             self.modelStatus = "Stub mode"
         } else {
-            // Use embedded Phi-3 implementation
-            print("🔧 Using embedded Phi-3 services")
-            self.llmInterface = EmbeddedLLMInterface()
-            self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
-            self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
-            self.modelStatus = "Loading..."
+            switch backend {
+            case .ollama:
+                // Use Ollama implementation (fast and reliable)
+                print("🔧 Attempting to use Ollama services")
+                self.llmInterface = OllamaLLMInterface()
+                self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
+                self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
+                self.modelStatus = "Connecting to Ollama..."
+                
+            case .embedded:
+                // Use embedded Phi-3 implementation (fallback)
+                print("🔧 Using embedded Phi-3 services")
+                self.llmInterface = EmbeddedLLMInterface()
+                self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
+                self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
+                self.modelStatus = "Loading embedded model..."
+                
+            case .stub:
+                // This case shouldn't happen since useStubServices would be true
+                print("🔧 Using stub services (fallback)")
+                self.llmInterface = StubLLMInterface()
+                self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
+                self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
+                self.modelStatus = "Stub mode"
+            }
         }
         
         print("🔧 ServiceManager initialization complete")

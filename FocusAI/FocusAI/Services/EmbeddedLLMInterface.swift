@@ -232,10 +232,10 @@ public class EmbeddedLLMInterface: LLMInterface {
         let prompt = buildQuestionAnswerPrompt(question: question, context: context)
         
         do {
-            let startTime = Date()
+        let startTime = Date()
             let response = try await generateText(prompt: prompt, maxTokens: 500)
-            let duration = Date().timeIntervalSince(startTime)
-            let cleanedResponse = cleanGeneratedText(response, for: .questionAnswer)
+        let duration = Date().timeIntervalSince(startTime)
+        let cleanedResponse = cleanGeneratedText(response, for: .questionAnswer)
             
             // More lenient fallback detection - only trigger if really short or empty
             if cleanedResponse.trimmingCharacters(in: .whitespacesAndNewlines).count < 5 {
@@ -245,11 +245,11 @@ public class EmbeddedLLMInterface: LLMInterface {
                 logger.warning("⚠️ Using fallback for question: response too short (\(cleanedResponse.count) chars)")
                 return fallbackResponse
             }
-            
-            recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: cleanedResponse, 
-                                duration: duration, usedFallback: false, fallbackReason: nil)
-            logger.info("✅ Question answered successfully in \(String(format: "%.2f", duration))s")
-            return cleanedResponse
+        
+        recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: cleanedResponse, 
+                            duration: duration, usedFallback: false, fallbackReason: nil)
+        logger.info("✅ Question answered successfully in \(String(format: "%.2f", duration))s")
+        return cleanedResponse
         } catch {
             let fallbackResponse = createFallbackAnswer(question: question, context: context)
             recordGenerationStats(prompt: prompt, rawResponse: "", cleanedResponse: fallbackResponse, 
@@ -272,27 +272,27 @@ public class EmbeddedLLMInterface: LLMInterface {
             
             do {
                 let chunks = chunkText(text, maxChunkSize: 1200) // Larger chunks for fewer requests
-                logger.info("🔪 Split into \(chunks.count) chunks for sequential processing")
-                
+            logger.info("🔪 Split into \(chunks.count) chunks for sequential processing")
+            
                 // Process chunks sequentially (server can only handle one at a time anyway)
-                var chunkSummaries: [String] = []
-                for (index, chunk) in chunks.enumerated() {
-                    logger.info("⚡ Processing chunk \(index + 1)/\(chunks.count)...")
-                    let summary = try await generateChunkSummary(chunk)
-                    chunkSummaries.append(summary)
-                }
-                
-                // Combine the chunk summaries
-                let finalSummary = try await combineChunkSummaries(chunkSummaries)
-                let duration = Date().timeIntervalSince(startTime)
-                
-                recordGenerationStats(prompt: "Chunked summary (\(chunks.count) chunks)", 
-                                    rawResponse: finalSummary, cleanedResponse: finalSummary, 
-                                    duration: duration, usedFallback: false, fallbackReason: nil)
-                
-                recordPerformanceMetric("Chunked Summary", duration: duration, tokenCount: finalSummary.split(separator: " ").count)
+            var chunkSummaries: [String] = []
+            for (index, chunk) in chunks.enumerated() {
+                logger.info("⚡ Processing chunk \(index + 1)/\(chunks.count)...")
+                let summary = try await generateChunkSummary(chunk)
+                chunkSummaries.append(summary)
+            }
+            
+            // Combine the chunk summaries
+            let finalSummary = try await combineChunkSummaries(chunkSummaries)
+            let duration = Date().timeIntervalSince(startTime)
+            
+            recordGenerationStats(prompt: "Chunked summary (\(chunks.count) chunks)", 
+                                rawResponse: finalSummary, cleanedResponse: finalSummary, 
+                                duration: duration, usedFallback: false, fallbackReason: nil)
+            
+            recordPerformanceMetric("Chunked Summary", duration: duration, tokenCount: finalSummary.split(separator: " ").count)
                 logger.info("✅ Chunked summary completed in \(String(format: "%.2f", duration))s (was \(chunks.count) sequential chunks)")
-                return finalSummary
+            return finalSummary
                 
             } catch {
                 logger.warning("⚠️ Chunked processing failed, falling back to truncated single pass: \(error)")
@@ -305,8 +305,8 @@ public class EmbeddedLLMInterface: LLMInterface {
         
         do {
             let response = try await generateText(prompt: prompt, maxTokens: 400) // Reduced for speed
-            let duration = Date().timeIntervalSince(startTime)
-            let cleanedResponse = cleanGeneratedText(response, for: .summary)
+        let duration = Date().timeIntervalSince(startTime)
+        let cleanedResponse = cleanGeneratedText(response, for: .summary)
             
             // More lenient fallback detection - only trigger if really short or empty
             if cleanedResponse.trimmingCharacters(in: .whitespacesAndNewlines).count < 10 {
@@ -316,12 +316,12 @@ public class EmbeddedLLMInterface: LLMInterface {
                 logger.warning("⚠️ Using fallback for summary: response too short (\(cleanedResponse.count) chars)")
                 return fallbackResponse
             }
-            
-            recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: cleanedResponse, 
-                                duration: duration, usedFallback: false, fallbackReason: nil)
+        
+        recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: cleanedResponse, 
+                            duration: duration, usedFallback: false, fallbackReason: nil)
             recordPerformanceMetric("Single Summary", duration: duration, tokenCount: cleanedResponse.split(separator: " ").count)
-            logger.info("✅ Summary generated successfully in \(String(format: "%.2f", duration))s")
-            return cleanedResponse
+        logger.info("✅ Summary generated successfully in \(String(format: "%.2f", duration))s")
+        return cleanedResponse
         } catch {
             let fallbackResponse = createFallbackSummary(from: text)
             recordGenerationStats(prompt: prompt, rawResponse: "", cleanedResponse: fallbackResponse, 
@@ -339,40 +339,40 @@ public class EmbeddedLLMInterface: LLMInterface {
         let prompt = buildFlashcardPrompt(text: text)
         
         do {
-            let startTime = Date()
+        let startTime = Date()
             let response = try await generateText(prompt: prompt, maxTokens: 1500) // Increased from 1000
-            let duration = Date().timeIntervalSince(startTime)
-            
-            // Debug logging to see what we're getting
+        let duration = Date().timeIntervalSince(startTime)
+        
+        // Debug logging to see what we're getting
             logger.info("🔍 Raw flashcard response (\(response.count) chars): \(String(response.prefix(200)))...")
+        
+        let flashcards = parseFlashcards(from: response)
+        
+        // Debug logging for parsing results
+        logger.info("🎯 Parsed \(flashcards.count) flashcards from response")
+        
+        if flashcards.isEmpty {
+            logger.warning("⚠️ No flashcards parsed from response, trying enhanced parsing...")
+            let enhancedFlashcards = parseFlashcardsEnhanced(from: response)
             
-            let flashcards = parseFlashcards(from: response)
+            if !enhancedFlashcards.isEmpty {
+                logger.info("✅ Enhanced parsing found \(enhancedFlashcards.count) flashcards")
+                recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: "Generated \(enhancedFlashcards.count) flashcards (enhanced parsing)", 
+                                    duration: duration, usedFallback: false, fallbackReason: nil)
+                return enhancedFlashcards
+            }
             
-            // Debug logging for parsing results
-            logger.info("🎯 Parsed \(flashcards.count) flashcards from response")
-            
-            if flashcards.isEmpty {
-                logger.warning("⚠️ No flashcards parsed from response, trying enhanced parsing...")
-                let enhancedFlashcards = parseFlashcardsEnhanced(from: response)
-                
-                if !enhancedFlashcards.isEmpty {
-                    logger.info("✅ Enhanced parsing found \(enhancedFlashcards.count) flashcards")
-                    recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: "Generated \(enhancedFlashcards.count) flashcards (enhanced parsing)", 
-                                        duration: duration, usedFallback: false, fallbackReason: nil)
-                    return enhancedFlashcards
-                }
-                
                 let fallbackFlashcards = createFallbackFlashcards(from: text)
                 recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: "Generated \(fallbackFlashcards.count) fallback flashcards", 
                                     duration: duration, usedFallback: true, fallbackReason: "No flashcards parsed from response")
                 logger.warning("⚠️ Using fallback flashcards: no flashcards parsed from response")
                 return fallbackFlashcards
-            }
-            
-            recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: "Generated \(flashcards.count) flashcards", 
-                                duration: duration, usedFallback: false, fallbackReason: nil)
-            logger.info("✅ Generated \(flashcards.count) flashcards successfully in \(String(format: "%.2f", duration))s")
-            return flashcards
+        }
+        
+        recordGenerationStats(prompt: prompt, rawResponse: response, cleanedResponse: "Generated \(flashcards.count) flashcards", 
+                            duration: duration, usedFallback: false, fallbackReason: nil)
+        logger.info("✅ Generated \(flashcards.count) flashcards successfully in \(String(format: "%.2f", duration))s")
+        return flashcards
         } catch {
             let fallbackFlashcards = createFallbackFlashcards(from: text)
             recordGenerationStats(prompt: prompt, rawResponse: "", cleanedResponse: "Generated \(fallbackFlashcards.count) fallback flashcards", 

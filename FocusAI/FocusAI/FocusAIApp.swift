@@ -10,7 +10,7 @@ import AppKit
 
 @main
 struct FocusAIApp: App {
-    @StateObject private var serviceManager = ServiceManager(useStubServices: false)
+    @StateObject private var serviceManager = ServiceManager(useStubServices: false, backend: .ollama)
     
     init() {
         // Customize window appearance

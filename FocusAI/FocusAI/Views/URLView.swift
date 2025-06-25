@@ -297,11 +297,11 @@ public struct URLView: View {
         }
         
         do {
-            let document = try await serviceManager.processDocument(url: url)
-            currentDocumentText = document.content
+            // Extract content from URL first
+            currentDocumentText = try await serviceManager.documentProcessor.extractText(from: url)
             
             // Start both summary and flashcards in parallel
-            async let summaryTask = serviceManager.llmInterface.generateSummary(text: document.content)
+            async let summaryTask = serviceManager.llmInterface.generateSummary(text: currentDocumentText)
             
             // Start flashcard generation in background with proper task management
             flashcardTask = Task {
