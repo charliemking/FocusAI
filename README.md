@@ -67,10 +67,6 @@ Typical performance on M2 MacBook Pro (16GB RAM):
 - **No tracking or analytics**
 - **Your documents stay private**
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues and pull requests.
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
