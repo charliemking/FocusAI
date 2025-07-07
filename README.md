@@ -13,38 +13,6 @@ privacy, and a distraction-free experience. This is an ongoing personal project 
 - **🔒 Complete Privacy**: Everything runs locally on your Mac
 - **⚡ Optimized Performance**: Smart chunking and parallel processing for speed
 
-## 🚀 Performance Optimizations (NEW!)
-
-FocusAI now includes several performance optimizations to make summarization **significantly faster**:
-
-### ⚡ CPU-Optimized Inference
-- **Conservative threading** to prevent overheating (uses only performance cores)
-- **NO GPU acceleration** for thermal safety (your computer won't overheat!)
-- **Larger batch sizes** (1024) for better CPU efficiency
-- **Prompt caching** enabled for repeated queries
-- **Memory optimization** with larger context windows when RAM allows
-
-### 🔪 Smart Document Chunking
-- **Automatic chunking** for documents >2000 characters
-- **Parallel processing** of chunks for faster results
-- **Map-reduce approach**: summarize sections, then combine
-- **Intelligent splitting** by paragraphs and sentences
-
-### 📝 Text Preprocessing
-- **Token optimization** by removing PDF artifacts (page numbers, URLs)
-- **Whitespace cleanup** to reduce unnecessary tokens
-- **Faster prompts** with streamlined templates
-
-### 📊 Performance Monitoring
-- **Real-time metrics** tracking inference speed
-- **Tokens per second** measurement
-- **Performance reports** in diagnostics
-
-### Expected Speed Improvements:
-- **Small documents** (<2K chars): ~30-50% faster
-- **Large documents** (>2K chars): ~60-80% faster via chunking
-- **Typical 1000-word PDF**: From 2+ minutes → **20-40 seconds**
-
 ## 🖥️ System Requirements
 
 - macOS 11.0 or later
@@ -58,6 +26,7 @@ FocusAI now includes several performance optimizations to make summarization **s
 2. Run the setup script to download the AI model:
    ```bash
    ./setup_embedded_llm.sh
+   ./setup_ollama.sh
    ```
 3. Open FocusAI.xcodeproj in Xcode
 4. Build and run the application
@@ -109,3 +78,37 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 **Note**: FocusAI prioritizes thermal safety and will not stress your hardware. All optimizations are designed to be fast while keeping your Mac cool and stable. 
+
+---
+
+## 🚀 Performance Optimizations (NEW!)
+
+FocusAI now includes several performance optimizations to make summarization **significantly faster**:
+
+### ⚡ CPU-Optimized Inference
+- **Conservative threading** to prevent overheating (uses only performance cores)
+- **NO GPU acceleration** for thermal safety (your computer won't overheat!)
+- **Larger batch sizes** (1024) for better CPU efficiency
+- **Prompt caching** enabled for repeated queries
+- **Memory optimization** with larger context windows when RAM allows
+
+### 🔪 Smart Document Chunking
+- **Automatic chunking** for documents >2000 characters
+- **Parallel processing** of chunks for faster results
+- **Map-reduce approach**: summarize sections, then combine
+- **Intelligent splitting** by paragraphs and sentences
+
+### 📝 Text Preprocessing
+- **Token optimization** by removing PDF artifacts (page numbers, URLs)
+- **Whitespace cleanup** to reduce unnecessary tokens
+- **Faster prompts** with streamlined templates
+
+### 📊 Performance Monitoring
+- **Real-time metrics** tracking inference speed
+- **Tokens per second** measurement
+- **Performance reports** in diagnostics
+
+### Expected Speed Improvements:
+- **Small documents** (<2K chars): ~30-50% faster
+- **Large documents** (>2K chars): ~60-80% faster via chunking
+- **Typical 1000-word PDF**: From 2+ minutes → **20-40 seconds**
