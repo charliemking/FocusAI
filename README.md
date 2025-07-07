@@ -48,7 +48,7 @@ privacy, and a distraction-free experience. This is an ongoing personal project 
 ## Technical Details
 
 - **AI Model**: Phi-3-mini-4k-instruct (Q4_K_M quantized)
-- **Inference Engine**: llama.cpp (CPU-optimized build)
+- **Inference Engine**: llama.cpp (CPU-optimized build) or Ollama
 - **Framework**: SwiftUI with async/await
 - **Privacy**: 100% on-device processing, no network required
 
