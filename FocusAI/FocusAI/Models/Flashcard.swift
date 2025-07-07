@@ -1,7 +1,7 @@
 import Foundation
 
 public struct Flashcard: Identifiable, Codable {
-    public let id = UUID()
+    public let id: UUID
     public var question: String
     public var answer: String
     public var tags: [String]
@@ -9,6 +9,7 @@ public struct Flashcard: Identifiable, Codable {
     public var confidenceLevel: Int // 1-5 scale
     
     public init(question: String, answer: String, tags: [String] = []) {
+        self.id = UUID()
         self.question = question
         self.answer = answer
         self.tags = tags
@@ -27,7 +28,7 @@ public enum FlashcardDifficulty: String, CaseIterable {
 }
 
 public struct ProcessedDocument {
-    public let id = UUID()
+    public let id: UUID
     public let title: String
     public let content: String
     public let summary: String
@@ -37,6 +38,7 @@ public struct ProcessedDocument {
     public let sourceType: DocumentSourceType
     
     public init(title: String, content: String, summary: String, flashcards: [Flashcard] = [], sourceType: DocumentSourceType) {
+        self.id = UUID()
         self.title = title
         self.content = content
         self.summary = summary

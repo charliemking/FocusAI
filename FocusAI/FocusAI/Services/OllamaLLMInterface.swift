@@ -290,13 +290,28 @@ public class OllamaLLMInterface: LLMInterface {
         let truncatedText = String(text.prefix(3000))
         
         return """
-        <|system|>You are a flashcard creator. This is a new, independent request. Create exactly 3-5 unique flashcards based solely on the provided text. Use ONLY the Q: and A: format. Start each question with "Q:" and each answer with "A:". Do not reference any previous conversations or flashcards. Focus only on the current text provided.<|end|>
+        <|system|>You are a flashcard creator. Create exactly 3-5 unique flashcards based solely on the provided text. Use ONLY the Q: and A: format. Start each question with "Q:" and each answer with "A:". Do not use any headers, numbering, or formatting like "**flashcard 2**" or "Card 1:". Use only the simple Q: and A: format. 
+
+        IMPORTANT: Keep answers SHORT and CONCISE. Each answer should be 1-2 sentences maximum or under 30 words. Focus on the most essential information only.<|end|>
         <|user|>Create new flashcards from this text. Use this exact format for each flashcard:
 
-        Q: [Question about the text]
-        A: [Answer based on the text]
+        Q: [Brief question about the text]
+        A: [Short, concise answer - 1-2 sentences max]
+
+        Examples of good short answers:
+        Q: What is artificial intelligence?
+        A: AI refers to machines that can perform tasks requiring human intelligence.
+
+        Q: What are the main benefits of renewable energy?
+        A: Clean energy, reduced emissions, and long-term cost savings.
 
         Create 3-5 flashcards. Each question should be different and test understanding of key concepts from the text.
+
+        IMPORTANT: 
+        - Do not use any headers, numbering, or formatting like "**flashcard 2**", "Card 1:", or "Flashcard 1:"
+        - Keep answers brief and concise (1-2 sentences or under 30 words)
+        - Focus on essential information only
+        - Use only the simple Q: and A: format shown above
 
         Text: \(truncatedText)<|end|>
         <|assistant|>
@@ -347,11 +362,11 @@ public class OllamaLLMInterface: LLMInterface {
                 // Save previous flashcard if we have one
                 if !currentQuestion.isEmpty && !currentAnswer.isEmpty {
                     flashcards.append(Flashcard(
-                        question: currentQuestion,
-                        answer: currentAnswer,
+                        question: cleanFlashcardText(currentQuestion),
+                        answer: truncateAnswerIfNeeded(cleanFlashcardText(currentAnswer)),
                         tags: ["ai-generated", "ollama"]
                     ))
-                    logger.info("✅ Parsed flashcard: Q: \(currentQuestion) | A: \(currentAnswer)")
+                    logger.info("✅ Parsed flashcard: Q: \(self.cleanFlashcardText(currentQuestion)) | A: \(self.truncateAnswerIfNeeded(self.cleanFlashcardText(currentAnswer)))")
                 }
                 
                 // Extract question
@@ -392,11 +407,11 @@ public class OllamaLLMInterface: LLMInterface {
         // Add the last flashcard
         if !currentQuestion.isEmpty && !currentAnswer.isEmpty {
             flashcards.append(Flashcard(
-                question: currentQuestion,
-                answer: currentAnswer,
+                question: cleanFlashcardText(currentQuestion),
+                answer: truncateAnswerIfNeeded(cleanFlashcardText(currentAnswer)),
                 tags: ["ai-generated", "ollama"]
             ))
-            logger.info("✅ Parsed final flashcard: Q: \(currentQuestion) | A: \(currentAnswer)")
+            logger.info("✅ Parsed final flashcard: Q: \(self.cleanFlashcardText(currentQuestion)) | A: \(self.truncateAnswerIfNeeded(self.cleanFlashcardText(currentAnswer)))")
         }
         
         logger.info("📚 Total flashcards parsed: \(flashcards.count)")
@@ -426,11 +441,11 @@ public class OllamaLLMInterface: LLMInterface {
                 // Save previous flashcard if we have one
                 if !currentQuestion.isEmpty && !currentAnswer.isEmpty {
                     flashcards.append(Flashcard(
-                        question: currentQuestion,
-                        answer: currentAnswer,
+                        question: cleanFlashcardText(currentQuestion),
+                        answer: truncateAnswerIfNeeded(cleanFlashcardText(currentAnswer)),
                         tags: ["ai-generated", "ollama"]
                     ))
-                    logger.info("✅ Enhanced parsed flashcard: Q: \(currentQuestion) | A: \(currentAnswer)")
+                    logger.info("✅ Enhanced parsed flashcard: Q: \(self.cleanFlashcardText(currentQuestion)) | A: \(self.truncateAnswerIfNeeded(self.cleanFlashcardText(currentAnswer)))")
                 }
                 
                 // Extract question
@@ -464,11 +479,11 @@ public class OllamaLLMInterface: LLMInterface {
         // Add the last flashcard
         if !currentQuestion.isEmpty && !currentAnswer.isEmpty {
             flashcards.append(Flashcard(
-                question: currentQuestion,
-                answer: currentAnswer,
+                question: cleanFlashcardText(currentQuestion),
+                answer: truncateAnswerIfNeeded(cleanFlashcardText(currentAnswer)),
                 tags: ["ai-generated", "ollama"]
             ))
-            logger.info("✅ Enhanced parsed final flashcard: Q: \(currentQuestion) | A: \(currentAnswer)")
+            logger.info("✅ Enhanced parsed final flashcard: Q: \(self.cleanFlashcardText(currentQuestion)) | A: \(self.truncateAnswerIfNeeded(self.cleanFlashcardText(currentAnswer)))")
         }
         
         logger.info("📚 Enhanced total flashcards parsed: \(flashcards.count)")
@@ -493,16 +508,16 @@ public class OllamaLLMInterface: LLMInterface {
                     let answerRange = Range(match.range(at: 2), in: text)
                     
                     if let questionRange = questionRange, let answerRange = answerRange {
-                        let question = String(text[questionRange]).trimmingCharacters(in: .whitespacesAndNewlines)
-                        let answer = String(text[answerRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                        let question = cleanFlashcardText(String(text[questionRange]))
+                        let answer = cleanFlashcardText(String(text[answerRange]))
                         
                         if !question.isEmpty && !answer.isEmpty {
                             flashcards.append(Flashcard(
                                 question: question,
-                                answer: answer,
+                                answer: truncateAnswerIfNeeded(answer),
                                 tags: ["ai-generated", "ollama", "regex-parsed"]
                             ))
-                            logger.info("✅ Regex parsed flashcard: Q: \(question) | A: \(answer)")
+                            logger.info("✅ Regex parsed flashcard: Q: \(question) | A: \(self.truncateAnswerIfNeeded(answer))")
                         }
                     }
                 }
@@ -539,10 +554,10 @@ public class OllamaLLMInterface: LLMInterface {
                     
                     // If line contains a question mark, treat it as a question
                     if line.contains("?") && question.isEmpty {
-                        question = line.replacingOccurrences(of: "^(Q:|Question:|\\d+\\.|\\*\\*Q:|\\*\\*Question:)\\s*", with: "", options: .regularExpression)
+                        question = cleanFlashcardText(line)
                         // Next line might be the answer
                         if i + 1 < lines.count {
-                            answer = lines[i + 1].replacingOccurrences(of: "^(A:|Answer:|\\*\\*A:|\\*\\*Answer:)\\s*", with: "", options: .regularExpression)
+                            answer = cleanFlashcardText(lines[i + 1])
                         }
                         break
                     }
@@ -550,23 +565,75 @@ public class OllamaLLMInterface: LLMInterface {
                 
                 // If we couldn't find a question with ?, try first two lines
                 if question.isEmpty && lines.count >= 2 {
-                    question = lines[0].replacingOccurrences(of: "^(Q:|Question:|\\d+\\.|\\*\\*Q:|\\*\\*Question:)\\s*", with: "", options: .regularExpression)
-                    answer = lines[1].replacingOccurrences(of: "^(A:|Answer:|\\*\\*A:|\\*\\*Answer:)\\s*", with: "", options: .regularExpression)
+                    question = cleanFlashcardText(lines[0])
+                    answer = cleanFlashcardText(lines[1])
                 }
                 
                 if !question.isEmpty && !answer.isEmpty && question.count > 5 && answer.count > 5 {
                     flashcards.append(Flashcard(
                         question: question,
-                        answer: answer,
+                        answer: truncateAnswerIfNeeded(answer),
                         tags: ["ai-generated", "ollama", "simple-parsed"]
                     ))
-                    logger.info("✅ Simple parsed flashcard: Q: \(question) | A: \(answer)")
+                    logger.info("✅ Simple parsed flashcard: Q: \(question) | A: \(self.truncateAnswerIfNeeded(answer))")
                 }
             }
         }
         
         logger.info("📚 Simple total flashcards parsed: \(flashcards.count)")
         return flashcards
+    }
+    
+    // MARK: - Text Cleaning Helper
+    
+    private func cleanFlashcardText(_ text: String) -> String {
+        var cleaned = text
+        
+        // Remove common flashcard prefixes and headers
+        let patternsToRemove = [
+            "^(Q:|Question:|\\d+\\.|\\*\\*Q:|\\*\\*Question:)\\s*",
+            "^(A:|Answer:|\\*\\*A:|\\*\\*Answer:)\\s*",
+            "^\\*\\*[Ff]lashcard\\s*\\d+\\*\\*\\s*",
+            "^\\*\\*[Ff]lashcard\\s*\\d+:\\*\\*\\s*",
+            "^[Ff]lashcard\\s*\\d+:\\s*",
+            "^[Ff]lashcard\\s*\\d+\\s*",
+            "^\\*\\*[Cc]ard\\s*\\d+\\*\\*\\s*",
+            "^[Cc]ard\\s*\\d+:\\s*"
+        ]
+        
+        for pattern in patternsToRemove {
+            cleaned = cleaned.replacingOccurrences(of: pattern, with: "", options: .regularExpression)
+        }
+        
+        return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    // MARK: - Answer Length Management
+    
+    private func truncateAnswerIfNeeded(_ answer: String, maxWords: Int = 30) -> String {
+        let words = answer.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+        
+        if words.count <= maxWords {
+            return answer
+        }
+        
+        // Take first maxWords and try to end at a sentence boundary
+        let truncatedWords = Array(words.prefix(maxWords))
+        let truncatedText = truncatedWords.joined(separator: " ")
+        
+        // If it ends with a period, return as is
+        if truncatedText.hasSuffix(".") {
+            return truncatedText
+        }
+        
+        // Otherwise, try to find the last sentence boundary
+        if let lastPeriodIndex = truncatedText.lastIndex(of: ".") {
+            let endIndex = truncatedText.index(after: lastPeriodIndex)
+            return String(truncatedText[..<endIndex])
+        }
+        
+        // If no sentence boundary, add ellipsis
+        return truncatedText + "..."
     }
     
     // MARK: - Performance Tracking

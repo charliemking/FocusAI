@@ -866,19 +866,28 @@ public class EmbeddedLLMInterface: LLMInterface {
     private func buildFlashcardPrompt(text: String) -> String {
         let truncatedText = String(text.prefix(10000))
         return """
-        <|system|>You are creating educational flashcards. You must format each flashcard exactly as shown in the example. Use the exact format with Q: and A: prefixes.<|end|>
+        <|system|>You are creating educational flashcards. You must format each flashcard exactly as shown in the example. Use the exact format with Q: and A: prefixes. Do not use any headers, numbering, or formatting like "**flashcard 2**" or "Card 1:". Use only the simple Q: and A: format.
+
+        CRITICAL: Keep answers SHORT and CONCISE. Each answer must be 1-2 sentences maximum or under 30 words. Focus on the most essential information only.<|end|>
         <|user|>Create exactly 5-7 flashcards from this content:
 
         \(truncatedText)
 
         You must format each flashcard exactly like this example:
         Q: What is the main concept discussed?
-        A: The main concept is artificial intelligence, which refers to machines that can perform tasks requiring human intelligence.
+        A: The main concept is artificial intelligence for task automation.
 
         Q: What are the key benefits mentioned?
-        A: The key benefits include improved efficiency, automated decision-making, and enhanced data analysis capabilities.
+        A: Improved efficiency, automated decisions, and enhanced data analysis.
 
-        Important: Use only Q: and A: prefixes. Do not use numbers, bullets, or other formatting. Create 5-7 flashcards now:<|end|>
+        REQUIREMENTS:
+        - Use only Q: and A: prefixes
+        - Keep answers brief (1-2 sentences or under 30 words)
+        - Focus on essential information only
+        - No headers, numbering, or extra formatting
+        - Create 5-7 flashcards that test key concepts
+
+        Create flashcards now:<|end|>
         <|assistant|>Q:
         """
     }
@@ -971,10 +980,10 @@ public class EmbeddedLLMInterface: LLMInterface {
         
         // Final cleanup and validation
         return flashcards.map { flashcard in
-            let cleanQuestion = flashcard.question
+            let cleanQuestion = self.cleanFlashcardText(flashcard.question)
                 .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            let cleanAnswer = flashcard.answer
+            let cleanAnswer = self.truncateAnswerIfNeeded(self.cleanFlashcardText(flashcard.answer))
                 .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             
@@ -1000,7 +1009,7 @@ public class EmbeddedLLMInterface: LLMInterface {
             if trimmed.range(of: "^(Q:|Question:|\\d+\\.\\s*Q:)", options: [.regularExpression, .caseInsensitive]) != nil {
                 // Save previous flashcard
                 if let q = currentQuestion, let a = currentAnswer, q.count > 5, a.count > 5 {
-                    flashcards.append(Flashcard(question: q, answer: a))
+                    flashcards.append(Flashcard(question: cleanFlashcardText(q), answer: truncateAnswerIfNeeded(cleanFlashcardText(a))))
                 }
                 
                 // Extract question
@@ -1028,7 +1037,7 @@ public class EmbeddedLLMInterface: LLMInterface {
         
         // Add the last flashcard
         if let q = currentQuestion, let a = currentAnswer, q.count > 5, a.count > 5 {
-            flashcards.append(Flashcard(question: q, answer: a))
+            flashcards.append(Flashcard(question: cleanFlashcardText(q), answer: truncateAnswerIfNeeded(cleanFlashcardText(a))))
         }
         
         return flashcards
@@ -1050,7 +1059,7 @@ public class EmbeddedLLMInterface: LLMInterface {
             if trimmed.lowercased().hasPrefix("q:") {
                 // Save previous flashcard if complete
                 if let q = currentQuestion, let a = currentAnswer, !q.isEmpty, !a.isEmpty {
-                    flashcards.append(Flashcard(question: q, answer: a))
+                    flashcards.append(Flashcard(question: cleanFlashcardText(q), answer: truncateAnswerIfNeeded(cleanFlashcardText(a))))
                 }
                 
                 currentQuestion = String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1060,7 +1069,7 @@ public class EmbeddedLLMInterface: LLMInterface {
             } else if trimmed.lowercased().hasPrefix("question:") {
                 // Save previous flashcard if complete
                 if let q = currentQuestion, let a = currentAnswer, !q.isEmpty, !a.isEmpty {
-                    flashcards.append(Flashcard(question: q, answer: a))
+                    flashcards.append(Flashcard(question: cleanFlashcardText(q), answer: truncateAnswerIfNeeded(cleanFlashcardText(a))))
                 }
                 
                 currentQuestion = String(trimmed.dropFirst(9)).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1078,13 +1087,35 @@ public class EmbeddedLLMInterface: LLMInterface {
         
         // Add the last flashcard
         if let q = currentQuestion, let a = currentAnswer, !q.isEmpty, !a.isEmpty {
-            flashcards.append(Flashcard(question: q, answer: a))
+            flashcards.append(Flashcard(question: cleanFlashcardText(q), answer: truncateAnswerIfNeeded(cleanFlashcardText(a))))
         }
         
         return flashcards
     }
     
     // MARK: - Fallback Methods
+    
+    private func cleanFlashcardText(_ text: String) -> String {
+        var cleaned = text
+        
+        // Remove common flashcard prefixes and headers
+        let patternsToRemove = [
+            "^(Q:|Question:|\\d+\\.|\\*\\*Q:|\\*\\*Question:)\\s*",
+            "^(A:|Answer:|\\*\\*A:|\\*\\*Answer:)\\s*",
+            "^\\*\\*[Ff]lashcard\\s*\\d+\\*\\*\\s*",
+            "^\\*\\*[Ff]lashcard\\s*\\d+:\\*\\*\\s*",
+            "^[Ff]lashcard\\s*\\d+:\\s*",
+            "^[Ff]lashcard\\s*\\d+\\s*",
+            "^\\*\\*[Cc]ard\\s*\\d+\\*\\*\\s*",
+            "^[Cc]ard\\s*\\d+:\\s*"
+        ]
+        
+        for pattern in patternsToRemove {
+            cleaned = cleaned.replacingOccurrences(of: pattern, with: "", options: .regularExpression)
+        }
+        
+        return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
     
     private func createFallbackAnswer(question: String, context: String) -> String {
         return """
@@ -1116,7 +1147,7 @@ public class EmbeddedLLMInterface: LLMInterface {
         return keyTerms.map { term in
             Flashcard(
                 question: "What is \(term)?",
-                answer: "Based on the provided text, \(term) is an important concept. Please review the source material for detailed information."
+                answer: truncateAnswerIfNeeded("Important concept from the text. Review source material for details.")
             )
         }
     }
@@ -1251,5 +1282,33 @@ public class EmbeddedLLMInterface: LLMInterface {
         }
         
         return processed.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    // MARK: - Answer Length Management
+    
+    private func truncateAnswerIfNeeded(_ answer: String, maxWords: Int = 30) -> String {
+        let words = answer.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+        
+        if words.count <= maxWords {
+            return answer
+        }
+        
+        // Take first maxWords and try to end at a sentence boundary
+        let truncatedWords = Array(words.prefix(maxWords))
+        let truncatedText = truncatedWords.joined(separator: " ")
+        
+        // If it ends with a period, return as is
+        if truncatedText.hasSuffix(".") {
+            return truncatedText
+        }
+        
+        // Otherwise, try to find the last sentence boundary
+        if let lastPeriodIndex = truncatedText.lastIndex(of: ".") {
+            let endIndex = truncatedText.index(after: lastPeriodIndex)
+            return String(truncatedText[..<endIndex])
+        }
+        
+        // If no sentence boundary, add ellipsis
+        return truncatedText + "..."
     }
 } 
