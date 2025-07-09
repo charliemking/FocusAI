@@ -222,7 +222,7 @@ public struct TextView: View {
                     .font(Theme.processingTitleStyle)
                     .foregroundColor(Color(.darkGray))
                 
-                Text("This may take 1-2 minutes")
+                Text("This may take 30 seconds")
                     .font(Theme.processingSubtitleStyle)
                     .foregroundColor(Color(.darkGray))
             }

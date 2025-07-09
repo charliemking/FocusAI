@@ -2,7 +2,6 @@ import Foundation
 import PDFKit
 
 public enum LLMBackend {
-    case embedded
     case ollama
     case stub
 }
@@ -42,14 +41,6 @@ public class ServiceManager: ObservableObject {
                 self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
                 self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
                 self.modelStatus = "Connecting to Ollama..."
-                
-            case .embedded:
-                // Use embedded Phi-3 implementation (fallback)
-                print("🔧 Using embedded Phi-3 services")
-                self.llmInterface = EmbeddedLLMInterface()
-                self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
-                self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
-                self.modelStatus = "Loading embedded model..."
                 
             case .stub:
                 // This case shouldn't happen since useStubServices would be true

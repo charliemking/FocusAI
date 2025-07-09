@@ -123,24 +123,20 @@ public struct DiagnosticsView: View {
     private func loadDiagnostics() {
         Task {
             await MainActor.run {
-                if let embeddedLLM = serviceManager.llmInterface as? EmbeddedLLMInterface {
-                    diagnosticsText = embeddedLLM.getModelDiagnostics()
-                } else {
-                    diagnosticsText = """
-                    🔍 FocusAI Model Diagnostics
-                    ===========================
-                    
-                    ⚠️ Using \(type(of: serviceManager.llmInterface))
-                    
-                    📊 Service Status:
-                    • Initialized: \(serviceManager.isInitialized)
-                    • Processing: \(serviceManager.isProcessing)
-                    • Model status: \(serviceManager.modelStatus)
-                    • Last error: \(serviceManager.lastError?.localizedDescription ?? "None")
-                    
-                    💡 Note: Detailed diagnostics only available with EmbeddedLLMInterface
-                    """
-                }
+                diagnosticsText = """
+                🔍 FocusAI Model Diagnostics
+                ===========================
+                
+                ⚠️ Using \(type(of: serviceManager.llmInterface))
+                
+                📊 Service Status:
+                • Initialized: \(serviceManager.isInitialized)
+                • Processing: \(serviceManager.isProcessing)
+                • Model status: \(serviceManager.modelStatus)
+                • Last error: \(serviceManager.lastError?.localizedDescription ?? "None")
+                
+                💡 Note: Using Ollama LLM backend
+                """
             }
         }
     }
@@ -185,17 +181,7 @@ public struct DiagnosticsView: View {
     }
     
     private func runInferenceTest() async -> String {
-        if let embeddedLLM = serviceManager.llmInterface as? EmbeddedLLMInterface {
-            let (success, details) = await embeddedLLM.testInference()
-            return """
-            📋 Basic Inference Test:
-            \(details)
-            
-            🎯 Result: \(success ? "✅ PASSED" : "❌ FAILED")
-            """
-        } else {
-            return "⚠️ Inference test only available with EmbeddedLLMInterface"
-        }
+        return "⚠️ Inference test only available with embedded LLM interface"
     }
     
     private func runSummaryTest() async -> String {

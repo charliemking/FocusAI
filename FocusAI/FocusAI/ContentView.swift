@@ -3,6 +3,7 @@ import AppKit
 
 struct ContentView: View {
     @State private var selectedTab = 0
+    @State private var showOnboarding = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -15,7 +16,21 @@ struct ContentView: View {
                     .font(Theme.subtitleStyle)
                     .foregroundColor(Color(.darkGray))
             }
+            .overlay(
+                // Debug button (remove for production)
+                HStack {
+                    Spacer()
+                    Button("Show Onboarding") {
+                        showOnboarding = true
+                    }
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .opacity(0.7)
+                },
+                alignment: .topTrailing
+            )
             .frame(maxWidth: .infinity)
+            .padding(.horizontal, 20)
             .padding(.top, 8)
             .padding(.bottom, 12)
             .background(Color.white)
@@ -52,6 +67,9 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 1200, minHeight: 800)
+        .sheet(isPresented: $showOnboarding) {
+            OnboardingView(isPresented: $showOnboarding)
+        }
     }
 }
 
