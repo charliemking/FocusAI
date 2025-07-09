@@ -74,3 +74,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 **Note**: FocusAI prioritizes thermal safety and will not stress your hardware. All optimizations are designed to be fast while keeping your Mac cool and stable. 
+
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues or pull requests.
