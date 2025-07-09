@@ -6,15 +6,15 @@ enum Theme {
     static let backgroundWhite = Color(red: 0.98, green: 0.98, blue: 0.98)
     static let backgroundColor = Color(white: 0.95)
     
-    // FreightText fonts (50% larger) using specific font names
-    static let headerStyle = Font.custom("FreightText Pro Bold", size: 36) // Slightly bolder than titles
-    static let subtitleStyle = Font.custom("FreightText Pro Bold", size: 21) // Bold for subtitle
-    static let bodyStyle = Font.custom("FreightText Pro Book", size: 24)
-    static let captionStyle = Font.custom("FreightText Pro Book", size: 18)
-    static let titleStyle = Font.custom("FreightText Pro Medium", size: 30) // Section titles (Summary, Flashcards)
-    static let buttonStyle = Font.custom("FreightText Pro Semibold", size: 24)
+    // System fonts
+    static let headerStyle = Font.system(size: 36, weight: .bold)
+    static let subtitleStyle = Font.system(size: 21, weight: .bold)
+    static let bodyStyle = Font.system(size: 16, weight: .regular)
+    static let captionStyle = Font.system(size: 18, weight: .regular)
+    static let titleStyle = Font.system(size: 30, weight: .medium)
+    static let buttonStyle = Font.system(size: 24, weight: .semibold)
     
-    // Processing screen fonts (33% larger than original)
-    static let processingTitleStyle = Font.custom("FreightText Pro Bold", size: 27) // 20 * 1.33 ≈ 27
-    static let processingSubtitleStyle = Font.custom("FreightText Pro Book", size: 19) // 14 * 1.33 ≈ 19
+    // Processing screen fonts
+    static let processingTitleStyle = Font.system(size: 27, weight: .bold)
+    static let processingSubtitleStyle = Font.system(size: 19, weight: .regular)
 } 

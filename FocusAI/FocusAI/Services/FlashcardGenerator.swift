@@ -12,15 +12,28 @@ public class DefaultFlashcardGenerator: FlashcardGenerator {
     }
     
     public func generateFlashcards(from text: String, count: Int = 8, difficulty: FlashcardDifficulty = .intermediate) async throws -> [Flashcard] {
-        // For now, use the LLM interface to generate basic flashcards
-        // In a real implementation, this would format the prompt based on difficulty
-        let baseFlashcards = try await llmInterface.generateFlashcards(text: text)
+        // Try to generate the requested number of flashcards
+        var baseFlashcards = try await llmInterface.generateFlashcards(text: text, count: count)
         
-        // Adjust flashcards based on difficulty and count
+        // If we didn't get enough flashcards, try to generate more
+        if baseFlashcards.count < count {
+            print("⚠️ Only got \(baseFlashcards.count) flashcards, requested \(count). Trying to generate more...")
+            
+            // Try generating with a higher count to get more options
+            let additionalFlashcards = try await llmInterface.generateFlashcards(text: text, count: count + 5)
+            
+            // Use the additional flashcards if we got more
+            if additionalFlashcards.count > baseFlashcards.count {
+                baseFlashcards = additionalFlashcards
+            }
+        }
+        
+        // Adjust flashcards based on difficulty
         let adjustedFlashcards = adjustFlashcardsForDifficulty(baseFlashcards, difficulty: difficulty)
         
-        // Return the requested number of flashcards
-        return Array(adjustedFlashcards.prefix(count))
+        // Return the requested number of flashcards (or what we have if less)
+        let targetCount = min(count, adjustedFlashcards.count)
+        return Array(adjustedFlashcards.prefix(targetCount))
     }
     
     private func adjustFlashcardsForDifficulty(_ flashcards: [Flashcard], difficulty: FlashcardDifficulty) -> [Flashcard] {

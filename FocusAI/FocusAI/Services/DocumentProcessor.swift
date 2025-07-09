@@ -58,7 +58,7 @@ public class DefaultDocumentProcessor: DocumentProcessor {
         let content = try await extractText(from: pdf)
         let title = extractTitleFromContent(content) ?? "PDF Document"
         let summary = try await llmInterface.generateSummary(text: content)
-        let flashcards = try await llmInterface.generateFlashcards(text: content)
+        let flashcards = try await llmInterface.generateFlashcards(text: content, count: 5)
         
         return ProcessedDocument(
             title: title,
@@ -73,7 +73,7 @@ public class DefaultDocumentProcessor: DocumentProcessor {
         let content = try await extractText(from: url)
         let title = url.lastPathComponent.isEmpty ? url.host ?? "Web Document" : url.lastPathComponent
         let summary = try await llmInterface.generateSummary(text: content)
-        let flashcards = try await llmInterface.generateFlashcards(text: content)
+        let flashcards = try await llmInterface.generateFlashcards(text: content, count: 5)
         
         return ProcessedDocument(
             title: title,
@@ -87,7 +87,7 @@ public class DefaultDocumentProcessor: DocumentProcessor {
     public func processDocument(text: String) async throws -> ProcessedDocument {
         let title = extractTitleFromContent(text) ?? "Text Document"
         let summary = try await llmInterface.generateSummary(text: text)
-        let flashcards = try await llmInterface.generateFlashcards(text: text)
+        let flashcards = try await llmInterface.generateFlashcards(text: text, count: 5)
         
         return ProcessedDocument(
             title: title,

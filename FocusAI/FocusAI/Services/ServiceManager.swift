@@ -263,7 +263,7 @@ public class ServiceManager: ObservableObject {
             
             // Test flashcard generation
             print("🃏 Testing flashcard generation...")
-            let flashcards = try await llmInterface.generateFlashcards(text: testText)
+            let flashcards = try await llmInterface.generateFlashcards(text: testText, count: 5)
             print("✅ Generated \(flashcards.count) flashcards")
             for (i, card) in flashcards.enumerated() {
                 print("   Card \(i+1): \(card.question)")

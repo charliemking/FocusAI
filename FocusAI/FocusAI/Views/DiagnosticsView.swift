@@ -266,7 +266,7 @@ public struct DiagnosticsView: View {
         
         do {
             let startTime = Date()
-            let flashcards = try await serviceManager.llmInterface.generateFlashcards(text: testText)
+            let flashcards = try await serviceManager.llmInterface.generateFlashcards(text: testText, count: 5)
             let duration = Date().timeIntervalSince(startTime)
             
             var result = """

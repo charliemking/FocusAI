@@ -58,7 +58,7 @@ public class CoreMLLLMInterface: LLMInterface {
         return answer
     }
     
-    public func generateFlashcards(text: String) async throws -> [Flashcard] {
+    public func generateFlashcards(text: String, count: Int = 5) async throws -> [Flashcard] {
         print("🃏 Generating flashcards using named entity recognition...")
         
         var flashcards: [Flashcard] = []
@@ -69,35 +69,32 @@ public class CoreMLLLMInterface: LLMInterface {
         let definitions = extractDefinitions(from: text)
         
         // Create flashcards from named entities
-        for entity in namedEntities.prefix(3) {
+        for entity in namedEntities.prefix(count / 2) {
             let context = findContextForEntity(entity: entity, in: text)
             if !context.isEmpty {
                 flashcards.append(Flashcard(
                     question: "What is \(entity)?",
                     answer: context,
-                    difficulty: .intermediate
                 ))
             }
         }
         
         // Create flashcards from definitions
-        for definition in definitions.prefix(3) {
+        for definition in definitions.prefix(count / 2) {
             flashcards.append(Flashcard(
                 question: "Define: \(definition.term)",
                 answer: definition.definition,
-                difficulty: .intermediate
             ))
         }
         
         // Fill remaining slots with key term questions
-        let remainingSlots = max(0, 6 - flashcards.count)
+        let remainingSlots = max(0, count - flashcards.count)
         for term in keyTerms.prefix(remainingSlots) {
             let context = findContextForEntity(entity: term, in: text)
             if !context.isEmpty {
                 flashcards.append(Flashcard(
                     question: "Explain the concept of \(term)",
                     answer: context,
-                    difficulty: .intermediate
                 ))
             }
         }

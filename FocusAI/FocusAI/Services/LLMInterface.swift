@@ -3,7 +3,7 @@ import Foundation
 public protocol LLMInterface {
     func askQuestion(_ question: String, context: String) async throws -> String
     func generateSummary(text: String) async throws -> String
-    func generateFlashcards(text: String) async throws -> [Flashcard]
+    func generateFlashcards(text: String, count: Int) async throws -> [Flashcard]
     func loadModel() async throws
     func isModelLoaded() -> Bool
 }
@@ -63,7 +63,7 @@ public class StubLLMInterface: LLMInterface {
         
         let keyTerms = extractKeyTerms(from: text)
         let entities = extractNamedEntities(from: text)
-        let numbers = extractNumbers(from: text)
+        let _ = extractNumbers(from: text)
         
         // Build a natural summary using actual content
         var summary = ""
@@ -313,7 +313,7 @@ public class StubLLMInterface: LLMInterface {
         return processed.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
-    public func generateFlashcards(text: String) async throws -> [Flashcard] {
+    public func generateFlashcards(text: String, count: Int = 5) async throws -> [Flashcard] {
         guard modelLoaded else {
             throw LLMError.modelNotLoaded
         }
@@ -321,7 +321,7 @@ public class StubLLMInterface: LLMInterface {
         // Simulate processing time
         try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
         
-        return [
+        let baseFlashcards = [
             Flashcard(
                 question: "What is the main topic covered in this document?",
                 answer: "The document covers key concepts and information relevant to the subject matter being studied.",
@@ -341,8 +341,65 @@ public class StubLLMInterface: LLMInterface {
                 question: "What should be remembered for the exam?",
                 answer: "Key terms, definitions, relationships between concepts, and practical applications should be prioritized for exam preparation.",
                 tags: ["exam-prep", "key-terms"]
+            ),
+            Flashcard(
+                question: "What are the key relationships between concepts?",
+                answer: "The concepts are interconnected and build upon each other to form a comprehensive understanding.",
+                tags: ["relationships", "concepts"]
+            ),
+            Flashcard(
+                question: "What examples support the main ideas?",
+                answer: "Concrete examples illustrate the theoretical concepts and make them more understandable.",
+                tags: ["examples", "illustration"]
+            ),
+            Flashcard(
+                question: "How does this relate to other topics?",
+                answer: "This material connects to broader themes and can be integrated with other areas of study.",
+                tags: ["connections", "integration"]
+            ),
+            Flashcard(
+                question: "What are the practical implications?",
+                answer: "The information has real-world applications and can be used in practical situations.",
+                tags: ["practical", "implications"]
+            ),
+            Flashcard(
+                question: "What should be the focus for further study?",
+                answer: "Areas that need deeper understanding and additional research should be prioritized.",
+                tags: ["further-study", "priorities"]
+            ),
+            Flashcard(
+                question: "What are the most important takeaways?",
+                answer: "The essential points that should be remembered and applied in future learning.",
+                tags: ["takeaways", "essential"]
+            ),
+            Flashcard(
+                question: "What methodologies are discussed?",
+                answer: "Various approaches and methods used to understand and analyze the subject matter.",
+                tags: ["methodology", "approaches"]
+            ),
+            Flashcard(
+                question: "What are the key challenges mentioned?",
+                answer: "Obstacles and difficulties that need to be addressed or overcome in this area.",
+                tags: ["challenges", "obstacles"]
+            ),
+            Flashcard(
+                question: "What solutions are proposed?",
+                answer: "Recommended approaches and strategies to address the identified problems.",
+                tags: ["solutions", "strategies"]
+            ),
+            Flashcard(
+                question: "What are the main benefits discussed?",
+                answer: "Advantages and positive outcomes that can be achieved through proper implementation.",
+                tags: ["benefits", "advantages"]
+            ),
+            Flashcard(
+                question: "What historical context is provided?",
+                answer: "Background information and previous developments that led to the current state.",
+                tags: ["history", "context"]
             )
         ]
+        
+        return Array(baseFlashcards.prefix(count))
     }
 }
 

@@ -96,7 +96,7 @@ public class OllamaLLMInterface: LLMInterface {
         }
     }
     
-    public func generateFlashcards(text: String) async throws -> [Flashcard] {
+    public func generateFlashcards(text: String, count: Int = 5) async throws -> [Flashcard] {
         guard isLoaded else {
             throw LLMError.modelNotLoaded
         }
@@ -104,7 +104,7 @@ public class OllamaLLMInterface: LLMInterface {
         let requestId = UUID().uuidString.prefix(8)
         logger.info("🎯 Starting flashcard generation request \(requestId)")
         
-        let prompt = buildFlashcardPrompt(text: text)
+        let prompt = buildFlashcardPrompt(text: text, count: count)
         logger.info("📝 Request \(requestId) prompt: \(String(prompt.prefix(300)))...")
         
         let startTime = Date()
@@ -286,11 +286,13 @@ public class OllamaLLMInterface: LLMInterface {
         """
     }
     
-    private func buildFlashcardPrompt(text: String) -> String {
+    private func buildFlashcardPrompt(text: String, count: Int) -> String {
         let truncatedText = String(text.prefix(3000))
         
         return """
-        <|system|>You are a flashcard creator. Create exactly 3-5 unique flashcards based solely on the provided text. Use ONLY the Q: and A: format. Start each question with "Q:" and each answer with "A:". Do not use any headers, numbering, or formatting like "**flashcard 2**" or "Card 1:". Use only the simple Q: and A: format. 
+        <|system|>You are a flashcard creator. You MUST create exactly \(count) unique flashcards based solely on the provided text. Use ONLY the Q: and A: format. Start each question with "Q:" and each answer with "A:". Do not use any headers, numbering, or formatting like "**flashcard 2**" or "Card 1:". Use only the simple Q: and A: format. 
+
+        CRITICAL: You must generate exactly \(count) flashcards - no more, no less. Count them as you create them.
 
         IMPORTANT: Keep answers SHORT and CONCISE. Each answer should be 1-2 sentences maximum or under 30 words. Focus on the most essential information only.<|end|>
         <|user|>Create new flashcards from this text. Use this exact format for each flashcard:
@@ -305,13 +307,15 @@ public class OllamaLLMInterface: LLMInterface {
         Q: What are the main benefits of renewable energy?
         A: Clean energy, reduced emissions, and long-term cost savings.
 
-        Create 3-5 flashcards. Each question should be different and test understanding of key concepts from the text.
+        You MUST create exactly \(count) flashcards. Each question should be different and test understanding of key concepts from the text.
 
-        IMPORTANT: 
+        CRITICAL REQUIREMENTS: 
+        - Generate exactly \(count) flashcards - count them as you create them
         - Do not use any headers, numbering, or formatting like "**flashcard 2**", "Card 1:", or "Flashcard 1:"
         - Keep answers brief and concise (1-2 sentences or under 30 words)
         - Focus on essential information only
         - Use only the simple Q: and A: format shown above
+        - Generate enough diverse questions to reach exactly \(count) flashcards
 
         Text: \(truncatedText)<|end|>
         <|assistant|>
