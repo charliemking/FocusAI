@@ -15,6 +15,6 @@ enum Theme {
     static let buttonStyle = Font.system(size: 24, weight: .semibold)
     
     // Processing screen fonts
-    static let processingTitleStyle = Font.system(size: 27, weight: .bold)
+    static let processingTitleStyle = Font.system(size: 27, weight: .medium)
     static let processingSubtitleStyle = Font.system(size: 19, weight: .regular)
 } 

@@ -37,6 +37,9 @@ public class DefaultDocumentProcessor: DocumentProcessor {
         let (data, _) = try await URLSession.shared.data(from: url)
         
         if let htmlString = String(data: data, encoding: .utf8) {
+            // Extract metadata first
+            var metadata = extractMetadata(from: htmlString)
+            
             // Basic HTML text extraction (remove tags)
             let cleanText = htmlString
                 .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
@@ -48,10 +51,71 @@ public class DefaultDocumentProcessor: DocumentProcessor {
                 throw DocumentProcessorError.noTextFound
             }
             
-            return cleanText
+            // Combine metadata with content
+            var fullText = ""
+            if !metadata.isEmpty {
+                fullText += "Article Metadata:\n" + metadata + "\n\nArticle Content:\n"
+            }
+            fullText += cleanText
+            
+            return fullText
         }
         
         throw DocumentProcessorError.unsupportedFormat
+    }
+    
+    private func extractMetadata(from html: String) -> String {
+        var metadata: [String] = []
+        
+        // Extract author from meta tags
+        if let author = extractMetaContent(from: html, name: "author") {
+            metadata.append("Author: \(author)")
+        }
+        
+        // Extract publication date from meta tags
+        if let date = extractMetaContent(from: html, name: "date") ??
+                      extractMetaContent(from: html, property: "article:published_time") ??
+                      extractMetaContent(from: html, property: "article:published") {
+            metadata.append("Published: \(date)")
+        }
+        
+        // Extract title from meta tags
+        if let title = extractMetaContent(from: html, property: "og:title") ??
+                       extractMetaContent(from: html, name: "title") {
+            metadata.append("Title: \(title)")
+        }
+        
+        // Extract description
+        if let description = extractMetaContent(from: html, name: "description") ??
+                            extractMetaContent(from: html, property: "og:description") {
+            metadata.append("Description: \(description)")
+        }
+        
+        return metadata.joined(separator: "\n")
+    }
+    
+    private func extractMetaContent(from html: String, name: String? = nil, property: String? = nil) -> String? {
+        let namePattern = name != nil ? "name=\"\(name!)\"" : ""
+        let propertyPattern = property != nil ? "property=\"\(property!)\"" : ""
+        let searchPattern = name != nil ? namePattern : propertyPattern
+        
+        let pattern = "<meta[^>]*\(searchPattern)[^>]*content=\"([^\"]+)\"[^>]*>"
+        
+        do {
+            let regex = try NSRegularExpression(pattern: pattern, options: .caseInsensitive)
+            let matches = regex.matches(in: html, options: [], range: NSRange(location: 0, length: html.utf16.count))
+            
+            if let match = matches.first, match.numberOfRanges > 1 {
+                let range = Range(match.range(at: 1), in: html)
+                if let range = range {
+                    return String(html[range])
+                }
+            }
+        } catch {
+            // Ignore regex errors
+        }
+        
+        return nil
     }
     
     public func processDocument(pdf: PDFDocument) async throws -> ProcessedDocument {

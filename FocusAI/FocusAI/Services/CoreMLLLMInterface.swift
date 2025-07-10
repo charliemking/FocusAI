@@ -121,7 +121,7 @@ public class CoreMLLLMInterface: LLMInterface {
         // Select top sentences
         let topSentences = scoredSentences
             .sorted { $0.score > $1.score }
-            .prefix(3)
+            .prefix(5)
             .map { $0.sentence }
         
         return topSentences.joined(separator: " ")

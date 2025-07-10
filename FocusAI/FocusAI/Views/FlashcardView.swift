@@ -4,10 +4,12 @@ public struct FlashcardView: View {
     let flashcards: [Flashcard]
     @State private var currentIndex = 0
     @State private var isShowingAnswer = false
+    @State private var shuffledIndices: [Int] = []
 
     
     public init(flashcards: [Flashcard]) {
         self.flashcards = flashcards
+        self._shuffledIndices = State(initialValue: Array(0..<flashcards.count))
     }
     
     public var body: some View {
@@ -21,12 +23,13 @@ public struct FlashcardView: View {
                 // Current card indicator
                 HStack {
                     Text("Card \(currentIndex + 1) of \(flashcards.count)")
-                        .font(Theme.captionStyle)
-                        .foregroundColor(.secondary)
+                        .font(Theme.bodyStyle)
+                        .foregroundColor(Color(.darkGray))
                     
                     Spacer()
                 }
                 .padding(.horizontal, 8)
+                .padding(.bottom, 8)
                 
                 // Main flashcard with overlaid controls
                 ZStack {
@@ -61,22 +64,10 @@ public struct FlashcardView: View {
                 )
             
             VStack(spacing: 0) {
-                // Card type indicator
+                // Flip hint
                 HStack {
-                    Text(isShowingAnswer ? "ANSWER" : "QUESTION")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(isShowingAnswer ? .green : Theme.primaryColor)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill((isShowingAnswer ? .green : Theme.primaryColor).opacity(0.1))
-                        )
-                    
                     Spacer()
                     
-                    // Flip hint
                     Text("Tap to flip")
                         .font(.caption)
                         .foregroundColor(.gray)
@@ -111,22 +102,6 @@ public struct FlashcardView: View {
                                 }
                                 .frame(maxHeight: min(100, geometry.size.height * 0.6))
                             }
-                            
-                            // Tags (if any) - keep with content for better centering
-                            if !flashcard.tags.isEmpty {
-                                HStack {
-                                    ForEach(flashcard.tags.prefix(3), id: \.self) { tag in
-                                        Text(tag)
-                                            .font(.caption)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 2)
-                                            .background(Theme.lightAccent)
-                                            .foregroundColor(Theme.primaryColor)
-                                            .clipShape(Capsule())
-                                    }
-                                }
-                                .padding(.top, 4)
-                            }
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -152,38 +127,12 @@ public struct FlashcardView: View {
                     Text("Shuffle")
                 }
                 .font(.caption)
-                .foregroundColor(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule()
-                        .fill(Theme.primaryColor)
-                        .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
-                )
-            }
-            
-            Spacer()
-            
-            // Restart button (overlaid, compact)
-            Button(action: restartDeck) {
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.counterclockwise")
-                    Text("Restart")
-                }
-                .font(.caption)
                 .foregroundColor(Theme.primaryColor)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(
-                    Capsule()
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            Capsule()
-                                .stroke(Theme.primaryColor, lineWidth: 1)
-                        )
-                        .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
-                )
             }
+            
+            Spacer()
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
@@ -197,11 +146,6 @@ public struct FlashcardView: View {
                     .font(.title2)
                     .foregroundColor(currentIndex > 0 ? Theme.primaryColor : .gray)
                     .padding(12)
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                    )
             }
             .disabled(currentIndex <= 0)
             .opacity(currentIndex > 0 ? 1.0 : 0.3)
@@ -212,16 +156,11 @@ public struct FlashcardView: View {
             Button(action: nextCard) {
                 Image(systemName: "chevron.right")
                     .font(.title2)
-                    .foregroundColor(currentIndex < flashcards.count - 1 ? Theme.primaryColor : .gray)
+                    .foregroundColor(currentIndex < shuffledIndices.count - 1 ? Theme.primaryColor : .gray)
                     .padding(12)
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                    )
             }
-            .disabled(currentIndex >= flashcards.count - 1)
-            .opacity(currentIndex < flashcards.count - 1 ? 1.0 : 0.3)
+            .disabled(currentIndex >= shuffledIndices.count - 1)
+            .opacity(currentIndex < shuffledIndices.count - 1 ? 1.0 : 0.3)
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 16)
@@ -269,15 +208,15 @@ public struct FlashcardView: View {
                     Image(systemName: "chevron.right")
                 }
                 .font(Theme.subtitleStyle)
-                .foregroundColor(currentIndex < flashcards.count - 1 ? Theme.primaryColor : .gray)
+                .foregroundColor(currentIndex < shuffledIndices.count - 1 ? Theme.primaryColor : .gray)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(currentIndex < flashcards.count - 1 ? Theme.primaryColor : .gray, lineWidth: 1)
+                        .stroke(currentIndex < shuffledIndices.count - 1 ? Theme.primaryColor : .gray, lineWidth: 1)
                 )
             }
-            .disabled(currentIndex >= flashcards.count - 1)
+            .disabled(currentIndex >= shuffledIndices.count - 1)
         }
         .padding(.horizontal)
     }
@@ -351,8 +290,9 @@ public struct FlashcardView: View {
     }
     
     private var currentFlashcard: Flashcard? {
-        guard !flashcards.isEmpty && currentIndex < flashcards.count else { return nil }
-        return flashcards[currentIndex]
+        guard !flashcards.isEmpty && currentIndex < shuffledIndices.count else { return nil }
+        let actualIndex = shuffledIndices[currentIndex]
+        return flashcards[actualIndex]
     }
     
     // MARK: - Actions
@@ -364,7 +304,7 @@ public struct FlashcardView: View {
     }
     
     private func nextCard() {
-        guard currentIndex < flashcards.count - 1 else { return }
+        guard currentIndex < shuffledIndices.count - 1 else { return }
         
         withAnimation(.easeInOut(duration: 0.3)) {
             currentIndex += 1
@@ -388,9 +328,8 @@ public struct FlashcardView: View {
     }
     
     private func shuffleCards() {
-        // Note: This would require making flashcards mutable
-        // For now, just reset to first card
         withAnimation(.easeInOut(duration: 0.3)) {
+            shuffledIndices.shuffle()
             currentIndex = 0
             isShowingAnswer = false
         }
@@ -398,6 +337,7 @@ public struct FlashcardView: View {
     
     private func restartDeck() {
         withAnimation(.easeInOut(duration: 0.3)) {
+            shuffledIndices = Array(0..<flashcards.count)
             currentIndex = 0
             isShowingAnswer = false
         }

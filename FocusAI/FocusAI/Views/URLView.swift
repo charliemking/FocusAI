@@ -12,8 +12,10 @@ public struct URLView: View {
     @State private var summaryRotationAngle = 0.0
     @State private var flashcardRotationAngle = 0.0
     @State private var isLoadingFlashcards = false
+    @State private var isLoadingAnswer = false
     @State private var currentDocumentText = ""
     @State private var flashcardTask: Task<Void, Never>?
+    @State private var urlValidationMessage: String?
     
     public init() {}
     
@@ -123,9 +125,17 @@ public struct URLView: View {
                     // Left side - URL input
                     VStack(alignment: .leading, spacing: 8) {
                         TextField("Enter URL", text: $urlString)
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.plain)
                             .font(Theme.bodyStyle)
                             .foregroundColor(Color(.darkGray))
+                            .padding(8)
+                            .background(Color.white)
+                            .cornerRadius(6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                            )
+                            .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                         
                         Button("Process") {
                             Task {
@@ -136,6 +146,13 @@ public struct URLView: View {
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.primaryColor)
                         .disabled(urlString.isEmpty || isProcessing)
+                        
+                        if let validationMessage = urlValidationMessage {
+                            Text(validationMessage)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.top, 4)
+                        }
                         
                         Spacer()
                     }
@@ -171,9 +188,11 @@ public struct URLView: View {
                         .font(Theme.buttonStyle)
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.primaryColor)
-                        .disabled(urlString.isEmpty || isProcessing)
+                        .disabled(urlString.isEmpty || isProcessing || isLoadingAnswer)
                         
-                        if !answer.isEmpty {
+                        if isLoadingAnswer {
+                            answerLoadingView
+                        } else if !answer.isEmpty {
                             ScrollView {
                                 Text(answer)
                                     .font(Theme.bodyStyle)
@@ -215,7 +234,7 @@ public struct URLView: View {
                     .font(Theme.processingTitleStyle)
                     .foregroundColor(Color(.darkGray))
                 
-                Text("This may take 30 seconds")
+                Text("Creating comprehensive summary")
                     .font(Theme.processingSubtitleStyle)
                     .foregroundColor(Color(.darkGray))
             }
@@ -258,7 +277,36 @@ public struct URLView: View {
                     .font(Theme.processingTitleStyle)
                     .foregroundColor(Color(.darkGray))
                 
-                Text("Creating interactive study cards")
+                Text("This may take 30 seconds")
+                    .font(Theme.processingSubtitleStyle)
+                    .foregroundColor(Color(.darkGray))
+            }
+        }
+        .padding(27)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.2), radius: 11, x: 0, y: 5)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+    
+    private var answerLoadingView: some View {
+        VStack(spacing: 16) {
+            // Custom spinning indicator matching the other loading views
+            Circle()
+                .trim(from: 0, to: 0.8)
+                .stroke(Color(.darkGray), lineWidth: 5)
+                .frame(width: 53, height: 53)
+                .rotationEffect(.degrees(summaryRotationAngle))
+                .onAppear {
+                    startSummarySpinning()
+                }
+            
+            VStack(spacing: 5) {
+                Text("Analyzing question...")
+                    .font(Theme.processingTitleStyle)
+                    .foregroundColor(Color(.darkGray))
+                
+                Text("Answer will be ready in a moment")
                     .font(Theme.processingSubtitleStyle)
                     .foregroundColor(Color(.darkGray))
             }
@@ -271,12 +319,25 @@ public struct URLView: View {
     }
     
     private func loadURL() async {
-        guard let url = URL(string: urlString) else {
-            errorMessage = "Invalid URL"
+        // Validate URL format
+        guard !urlString.isEmpty else {
+            urlValidationMessage = "Please enter a URL"
+            return
+        }
+        
+        // Add http:// if no protocol is specified
+        var processedURL = urlString
+        if !processedURL.hasPrefix("http://") && !processedURL.hasPrefix("https://") {
+            processedURL = "https://" + processedURL
+        }
+        
+        guard let url = URL(string: processedURL), isValidURL(url) else {
+            urlValidationMessage = "Invalid URL format"
             return
         }
         
         isProcessing = true
+        urlValidationMessage = nil
         errorMessage = nil
         flashcards = [] // Reset flashcards
         
@@ -316,10 +377,50 @@ public struct URLView: View {
             
             // Flashcards will complete in background and update UI automatically
         } catch {
-            errorMessage = "Error loading URL: \(error.localizedDescription)"
+            // Handle specific error types
+            if let urlError = error as? URLError {
+                switch urlError.code {
+                case .notConnectedToInternet:
+                    urlValidationMessage = "No internet connection. Try using Text or PDF instead."
+                case .timedOut:
+                    urlValidationMessage = "Connection timed out"
+                case .cannotFindHost:
+                    urlValidationMessage = "Cannot find host"
+                case .cannotConnectToHost:
+                    urlValidationMessage = "Cannot connect to host"
+                case .networkConnectionLost:
+                    urlValidationMessage = "Network connection lost"
+                case .badURL:
+                    urlValidationMessage = "Invalid URL"
+                case .unsupportedURL:
+                    urlValidationMessage = "Unsupported URL"
+                default:
+                    urlValidationMessage = "Connection error: \(urlError.localizedDescription)"
+                }
+            } else {
+                urlValidationMessage = "Error processing URL: \(error.localizedDescription)"
+            }
         }
         
         isProcessing = false
+    }
+    
+    private func isValidURL(_ url: URL) -> Bool {
+        // Check if URL has a valid scheme and host
+        guard let scheme = url.scheme, let host = url.host else {
+            return false
+        }
+        
+        // Check for valid schemes
+        let validSchemes = ["http", "https"]
+        guard validSchemes.contains(scheme.lowercased()) else {
+            return false
+        }
+        
+        // Check for valid host format
+        let hostRegex = "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?([.][a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+        let hostPredicate = NSPredicate(format: "SELF MATCHES %@", hostRegex)
+        return hostPredicate.evaluate(with: host)
     }
     
 
@@ -381,14 +482,24 @@ public struct URLView: View {
             return
         }
         
+        isLoadingAnswer = true
+        
         do {
-            let result = try await serviceManager.askQuestion(question, context: summary)
-            answer = result
-            print("🤖 Answer: \(result)")
+            let result = try await serviceManager.askQuestion(question, context: currentDocumentText)
+            
+            // Validate response is not empty
+            let cleanedResult = result.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cleanedResult.isEmpty {
+                errorMessage = "The system didn't provide an answer. Please try rephrasing your question."
+            } else {
+                answer = cleanedResult
+                errorMessage = nil // Clear any previous error
+            }
         } catch {
             errorMessage = "Error asking question: \(error.localizedDescription)"
-            print("❌ Question error: \(error)")
         }
+        
+        isLoadingAnswer = false
     }
 }
 

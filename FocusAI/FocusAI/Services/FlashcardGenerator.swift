@@ -19,8 +19,8 @@ public class DefaultFlashcardGenerator: FlashcardGenerator {
         if baseFlashcards.count < count {
             print("⚠️ Only got \(baseFlashcards.count) flashcards, requested \(count). Trying to generate more...")
             
-            // Try generating with a higher count to get more options
-            let additionalFlashcards = try await llmInterface.generateFlashcards(text: text, count: count + 5)
+            // Try generating with just the requested count again (no +5)
+            let additionalFlashcards = try await llmInterface.generateFlashcards(text: text, count: count)
             
             // Use the additional flashcards if we got more
             if additionalFlashcards.count > baseFlashcards.count {

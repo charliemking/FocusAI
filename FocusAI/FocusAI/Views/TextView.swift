@@ -12,6 +12,7 @@ public struct TextView: View {
     @State private var summaryRotationAngle = 0.0
     @State private var flashcardRotationAngle = 0.0
     @State private var isLoadingFlashcards = false
+    @State private var isLoadingAnswer = false
     @State private var flashcardTask: Task<Void, Never>?
     
     public init() {}
@@ -56,7 +57,7 @@ public struct TextView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     
                                         // Flashcards section
-                    VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 4) {
                         // Always show title
                         HStack {
                             Text("Flashcards")
@@ -178,9 +179,11 @@ public struct TextView: View {
                         .font(Theme.buttonStyle)
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.primaryColor)
-                        .disabled(inputText.isEmpty || isProcessing)
+                        .disabled(inputText.isEmpty || isProcessing || isLoadingAnswer)
                         
-                        if !answer.isEmpty {
+                        if isLoadingAnswer {
+                            answerLoadingView
+                        } else if !answer.isEmpty {
                             ScrollView {
                                 Text(answer)
                                     .font(Theme.bodyStyle)
@@ -222,7 +225,7 @@ public struct TextView: View {
                     .font(Theme.processingTitleStyle)
                     .foregroundColor(Color(.darkGray))
                 
-                Text("This may take 30 seconds")
+                Text("Creating comprehensive summary")
                     .font(Theme.processingSubtitleStyle)
                     .foregroundColor(Color(.darkGray))
             }
@@ -265,7 +268,36 @@ public struct TextView: View {
                     .font(Theme.processingTitleStyle)
                     .foregroundColor(Color(.darkGray))
                 
-                Text("Creating interactive study cards")
+                Text("This may take 30 seconds")
+                    .font(Theme.processingSubtitleStyle)
+                    .foregroundColor(Color(.darkGray))
+            }
+        }
+        .padding(27)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.2), radius: 11, x: 0, y: 5)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+    
+    private var answerLoadingView: some View {
+        VStack(spacing: 16) {
+            // Custom spinning indicator matching the other loading views
+            Circle()
+                .trim(from: 0, to: 0.8)
+                .stroke(Color(.darkGray), lineWidth: 5)
+                .frame(width: 53, height: 53)
+                .rotationEffect(.degrees(summaryRotationAngle))
+                .onAppear {
+                    startSummarySpinning()
+                }
+            
+            VStack(spacing: 5) {
+                Text("Analyzing question...")
+                    .font(Theme.processingTitleStyle)
+                    .foregroundColor(Color(.darkGray))
+                
+                Text("Answer will be ready in a moment")
                     .font(Theme.processingSubtitleStyle)
                     .foregroundColor(Color(.darkGray))
             }
@@ -386,14 +418,24 @@ public struct TextView: View {
             return
         }
         
+        isLoadingAnswer = true
+        
         do {
             let result = try await serviceManager.askQuestion(question, context: inputText)
-            answer = result
-            print("🤖 Answer: \(result)")
+            
+            // Validate response is not empty
+            let cleanedResult = result.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cleanedResult.isEmpty {
+                errorMessage = "The system didn't provide an answer. Please try rephrasing your question."
+            } else {
+                answer = cleanedResult
+                errorMessage = nil // Clear any previous error
+            }
         } catch {
             errorMessage = "Error asking question: \(error.localizedDescription)"
-            print("❌ Question error: \(error)")
         }
+        
+        isLoadingAnswer = false
     }
 }
 

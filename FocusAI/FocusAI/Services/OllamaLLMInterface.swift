@@ -278,10 +278,10 @@ public class OllamaLLMInterface: LLMInterface {
         
         return """
         <|system|>You are a helpful AI assistant that creates concise, informative summaries. Focus on key points and main ideas.<|end|>
-        <|user|>Please summarize this text:
+        <|user|>Please summarize this text in exactly 5 sentences. Cover the main points and key ideas in a comprehensive but concise way. Do not number the sentences or use any numbering format. Write the summary as a natural paragraph:
 
         \(truncatedText)<|end|>
-        <|assistant|>Here's a summary of the text:
+        <|assistant|>Here's a 5-sentence summary of the text:
 
         """
     }
@@ -294,11 +294,11 @@ public class OllamaLLMInterface: LLMInterface {
 
         CRITICAL: You must generate exactly \(count) flashcards - no more, no less. Count them as you create them.
 
-        IMPORTANT: Keep answers SHORT and CONCISE. Each answer should be 1-2 sentences maximum or under 30 words. Focus on the most essential information only.<|end|>
+        IMPORTANT: Keep answers BRIEF and CONCISE. Each answer should be 1-2 sentences maximum or under 40 words. Focus on the most essential information only.<|end|>
         <|user|>Create new flashcards from this text. Use this exact format for each flashcard:
 
         Q: [Brief question about the text]
-        A: [Short, concise answer - 1-2 sentences max]
+        A: [Brief, concise answer - 1-2 sentences max]
 
         Examples of good short answers:
         Q: What is artificial intelligence?
@@ -312,7 +312,7 @@ public class OllamaLLMInterface: LLMInterface {
         CRITICAL REQUIREMENTS: 
         - Generate exactly \(count) flashcards - count them as you create them
         - Do not use any headers, numbering, or formatting like "**flashcard 2**", "Card 1:", or "Flashcard 1:"
-        - Keep answers brief and concise (1-2 sentences or under 30 words)
+        - Keep answers brief and concise (1-2 sentences or under 40 words)
         - Focus on essential information only
         - Use only the simple Q: and A: format shown above
         - Generate enough diverse questions to reach exactly \(count) flashcards
@@ -614,7 +614,7 @@ public class OllamaLLMInterface: LLMInterface {
     
     // MARK: - Answer Length Management
     
-    private func truncateAnswerIfNeeded(_ answer: String, maxWords: Int = 30) -> String {
+    private func truncateAnswerIfNeeded(_ answer: String, maxWords: Int = 40) -> String {
         let words = answer.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
         
         if words.count <= maxWords {

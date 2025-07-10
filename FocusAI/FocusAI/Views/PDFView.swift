@@ -23,6 +23,7 @@ public struct PDFView: View {
     @State private var summaryRotationAngle = 0.0
     @State private var flashcardRotationAngle = 0.0
     @State private var isLoadingFlashcards = false
+    @State private var isLoadingAnswer = false
     @State private var currentPDFText = ""
     @State private var flashcardTask: Task<Void, Never>?
     
@@ -68,7 +69,7 @@ public struct PDFView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     
                     // Flashcards section
-                    VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 4) {
                         // Always show title
                         HStack {
                             Text("Flashcards")
@@ -205,9 +206,11 @@ public struct PDFView: View {
                         .font(Theme.buttonStyle)
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.primaryColor)
-                        .disabled(selectedPDF == nil || isProcessing)
+                        .disabled(selectedPDF == nil || isProcessing || isLoadingAnswer)
                         
-                        if !answer.isEmpty {
+                        if isLoadingAnswer {
+                            answerLoadingView
+                        } else if !answer.isEmpty {
                             ScrollView {
                                 Text(answer)
                                     .font(Theme.bodyStyle)
@@ -271,7 +274,7 @@ public struct PDFView: View {
                     .font(Theme.processingTitleStyle)
                     .foregroundColor(Color(.darkGray))
                 
-                Text("This may take 30 seconds")
+                Text("Creating comprehensive summary")
                     .font(Theme.processingSubtitleStyle)
                     .foregroundColor(Color(.darkGray))
             }
@@ -314,7 +317,36 @@ public struct PDFView: View {
                     .font(Theme.processingTitleStyle)
                     .foregroundColor(Color(.darkGray))
                 
-                Text("Creating interactive study cards")
+                Text("This may take 30 seconds")
+                    .font(Theme.processingSubtitleStyle)
+                    .foregroundColor(Color(.darkGray))
+            }
+        }
+        .padding(27)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.2), radius: 11, x: 0, y: 5)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+    
+    private var answerLoadingView: some View {
+        VStack(spacing: 16) {
+            // Custom spinning indicator matching the other loading views
+            Circle()
+                .trim(from: 0, to: 0.8)
+                .stroke(Color(.darkGray), lineWidth: 5)
+                .frame(width: 53, height: 53)
+                .rotationEffect(.degrees(summaryRotationAngle))
+                .onAppear {
+                    startSummarySpinning()
+                }
+            
+            VStack(spacing: 5) {
+                Text("Analyzing question...")
+                    .font(Theme.processingTitleStyle)
+                    .foregroundColor(Color(.darkGray))
+                
+                Text("Answer will be ready in a moment")
                     .font(Theme.processingSubtitleStyle)
                     .foregroundColor(Color(.darkGray))
             }
@@ -560,18 +592,31 @@ public struct PDFView: View {
             return
         }
         
+        isLoadingAnswer = true
+        
         do {
-            let pdfText = extractTextFromPDF(pdf)
+            // Use cached PDF text if available, otherwise extract
+            let pdfText = currentPDFText.isEmpty ? extractTextFromPDF(pdf) : currentPDFText
             let result = try await serviceManager.askQuestion(question, context: pdfText)
-            answer = result
-            print("🤖 Answer: \(result)")
+            
+            // Validate response is not empty
+            let cleanedResult = result.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cleanedResult.isEmpty {
+                errorAlert = ErrorAlert(
+                    title: "No Response",
+                    message: "The system didn't provide an answer. Please try rephrasing your question."
+                )
+            } else {
+                answer = cleanedResult
+            }
         } catch {
             errorAlert = ErrorAlert(
                 title: "Question Error", 
                 message: "Error asking question: \(error.localizedDescription)"
             )
-            print("❌ Question error: \(error)")
         }
+        
+        isLoadingAnswer = false
     }
     
     private func extractTextFromPDF(_ pdf: PDFDocument) -> String {
