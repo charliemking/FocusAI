@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum Theme {
-    static let primaryColor = Color(red: 0.0, green: 0.66, blue: 0.35) // Emerald Green
+    static let primaryColor = Color(red: 0.20, green: 0.76, blue: 0.55) // Teal Green
     static let lightAccent = Color(red: 0.94, green: 0.98, blue: 0.96) // Light mint accent
     static let backgroundWhite = Color(red: 0.98, green: 0.98, blue: 0.98)
     static let backgroundColor = Color(white: 0.95)
