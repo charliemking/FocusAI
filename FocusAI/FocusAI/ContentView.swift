@@ -13,7 +13,7 @@ struct ContentView: View {
                     .font(Theme.headerStyle)
                     .foregroundColor(Theme.primaryColor)
                 Text("A Privacy-First Study Assistant by Charlie King")
-                    .font(Theme.subtitleStyle)
+                    .font(Theme.titleRegularStyle)
                     .foregroundColor(Color(.darkGray))
             }
             .overlay(
@@ -24,7 +24,7 @@ struct ContentView: View {
                         showOnboarding = true
                     }
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(Color(.darkGray))
                     .opacity(0.7)
                 },
                 alignment: .topTrailing
@@ -46,7 +46,7 @@ struct ContentView: View {
                                 index == 1 ? "Text" : "URL")
                                 .font(Theme.buttonStyle)
                         }
-                        .foregroundColor(selectedTab == index ? Theme.primaryColor : .gray)
+                        .foregroundColor(selectedTab == index ? Theme.primaryColor : Color(.darkGray))
                     }
                     .buttonStyle(.plain)
                 }

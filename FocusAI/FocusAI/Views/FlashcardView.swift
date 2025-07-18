@@ -70,7 +70,7 @@ public struct FlashcardView: View {
                     
                     Text("Tap to flip")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(Color(.darkGray))
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)

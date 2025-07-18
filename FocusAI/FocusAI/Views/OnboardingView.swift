@@ -73,7 +73,7 @@ public struct OnboardingView: View {
                             Text(steps[currentStep].description)
                                 .font(.body)
                                 .multilineTextAlignment(.center)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color(.darkGray))
                                 .padding(.horizontal)
                             
                             // Installation step specific content
@@ -125,7 +125,7 @@ public struct OnboardingView: View {
                                         currentStep -= 1
                                     }
                                 }
-                                .foregroundColor(.gray)
+                                .foregroundColor(Color(.darkGray))
                             }
                         }
                         .padding(.horizontal, 40)
@@ -196,12 +196,12 @@ public struct OnboardingView: View {
                 
                 Text("No data reaches the cloud - everything stays on your Mac")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(.darkGray))
                     .multilineTextAlignment(.center)
                 
                 Text("Thanks and enjoy! - Charlie")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(.darkGray))
                     .multilineTextAlignment(.center)
                     .italic()
             }
@@ -218,7 +218,7 @@ public struct OnboardingView: View {
                     
                     Text("This will check if Ollama is running and accessible on your system.")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(.darkGray))
                         .multilineTextAlignment(.center)
                 }
             } else if isCheckingOllama {
@@ -244,7 +244,7 @@ public struct OnboardingView: View {
                     
                     Text("You can now start using FocusAI to process documents with complete privacy.")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(.darkGray))
                         .multilineTextAlignment(.center)
                 }
             } else {
@@ -260,7 +260,7 @@ public struct OnboardingView: View {
                     
                     Text("Please install Ollama using the instructions from the previous step, then try again.")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(.darkGray))
                         .multilineTextAlignment(.center)
                     
                     Button("Try Again") {
@@ -384,7 +384,7 @@ private struct InstallationStep: View {
                 
                 Text(description)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(.darkGray))
             }
             
             Spacer()

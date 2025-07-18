@@ -16,14 +16,14 @@ struct AboutView: View {
                             .fontWeight(.bold)
                         
                         Text("Privacy-First AI Study Assistant")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
+                            .font(Theme.titleRegularStyle)
+                            .foregroundColor(Color(.darkGray))
                         
                         if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
                            let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
                             Text("Version \(version) (\(build))")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color(.darkGray))
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -39,7 +39,7 @@ struct AboutView: View {
                         
                         Text("FocusAI uses Microsoft's Phi-3 language model for completely offline AI processing. Your documents never leave your device.")
                             .font(.body)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(.darkGray))
                         
                         VStack(alignment: .leading, spacing: 8) {
                             InfoRow(label: "Model", value: "Phi-3-mini-4k-instruct")
@@ -59,7 +59,7 @@ struct AboutView: View {
                         
                         Text("FocusAI is built on top of excellent open source technologies:")
                             .font(.body)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(.darkGray))
                         
                         // Phi-3 License
                         LicenseView(
@@ -88,7 +88,7 @@ struct AboutView: View {
                         
                         Text(mitLicenseText)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(.darkGray))
                             .textSelection(.enabled)
                             .padding()
                             .background(Color.gray.opacity(0.1))
@@ -136,7 +136,7 @@ struct InfoRow: View {
                 .fontWeight(.medium)
                 .frame(width: 100, alignment: .leading)
             Text(value)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(.darkGray))
             Spacer()
         }
     }
@@ -156,11 +156,11 @@ struct LicenseView: View {
             
             Text("by \(source)")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(.darkGray))
             
             Text(description)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(.darkGray))
             
             Text(license)
                 .font(.caption)

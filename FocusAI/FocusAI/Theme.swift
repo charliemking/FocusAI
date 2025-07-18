@@ -9,7 +9,7 @@ enum Theme {
     // System fonts
     static let headerStyle = Font.system(size: 36, weight: .bold)
     static let subtitleStyle = Font.system(size: 21, weight: .bold)
-    static let bodyStyle = Font.system(size: 16, weight: .regular)
+    static let bodyStyle = Font.system(size: 18, weight: .regular)
     static let captionStyle = Font.system(size: 18, weight: .regular)
     static let titleStyle = Font.system(size: 30, weight: .medium)
     static let buttonStyle = Font.system(size: 24, weight: .semibold)
@@ -17,4 +17,7 @@ enum Theme {
     // Processing screen fonts
     static let processingTitleStyle = Font.system(size: 27, weight: .medium)
     static let processingSubtitleStyle = Font.system(size: 19, weight: .regular)
+    
+    // Subtitle with title size but lighter weight
+    static let titleRegularStyle = Font.system(size: 21, weight: .medium)
 } 

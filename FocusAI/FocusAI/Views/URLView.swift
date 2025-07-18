@@ -72,7 +72,7 @@ public struct URLView: View {
                             if !flashcards.isEmpty {
                                 Text("\(flashcards.count) cards")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color(.darkGray))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .background(Color.gray.opacity(0.1))
