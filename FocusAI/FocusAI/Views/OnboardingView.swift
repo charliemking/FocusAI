@@ -163,7 +163,7 @@ public struct OnboardingView: View {
                     InstallationStep(
                         number: "3",
                         title: "Download Model",
-                        description: "Copy and paste then press enter: ollama pull llama3.2:1b"
+                        description: "Copy and paste then press enter: ollama pull phi3:mini"
                     )
                 }
             }

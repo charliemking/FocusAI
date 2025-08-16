@@ -3,32 +3,36 @@ import AppKit
 
 struct ContentView: View {
     @State private var selectedTab = 0
-    @State private var showOnboarding = false
     
     var body: some View {
         VStack(spacing: 0) {
             // Header
             VStack(spacing: 4) {
-                Text("FocusAI")
-                    .font(Theme.headerStyle)
-                    .foregroundColor(Theme.primaryColor)
+                HStack(spacing: 12) {
+                    if let appIcon = NSImage(named: "AppIcon") {
+                        Image(nsImage: appIcon)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 48, height: 48)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    } else {
+                        // Fallback: Use SF Symbol
+                        Image(systemName: "book.circle.fill")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 48, height: 48)
+                            .foregroundColor(Theme.primaryColor)
+                    }
+                    
+                    Text("FocusAI")
+                        .font(Theme.headerStyle)
+                        .foregroundColor(Color.accentColor)
+                }
+                
                 Text("A Privacy-First Study Assistant by Charlie King")
                     .font(Theme.titleRegularStyle)
                     .foregroundColor(Color(.darkGray))
             }
-            .overlay(
-                // Debug button (remove for production)
-                HStack {
-                    Spacer()
-                    Button("Show Onboarding") {
-                        showOnboarding = true
-                    }
-                    .font(.caption)
-                    .foregroundColor(Color(.darkGray))
-                    .opacity(0.7)
-                },
-                alignment: .topTrailing
-            )
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -67,9 +71,6 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 1200, minHeight: 800)
-        .sheet(isPresented: $showOnboarding) {
-            OnboardingView(isPresented: $showOnboarding)
-        }
     }
 }
 

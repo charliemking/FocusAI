@@ -19,11 +19,11 @@
 		2A343FD62DFA2A0000C19D10 /* Flashcard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FD52DFA2A0000C19D10 /* Flashcard.swift */; };
 		2A343FD82DFA2A0000C19D10 /* DocumentProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FD72DFA2A0000C19D10 /* DocumentProcessor.swift */; };
 		2A343FDA2DFA2A0000C19D10 /* FlashcardGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FD92DFA2A0000C19D10 /* FlashcardGenerator.swift */; };
-		2A343FE42DFA2A0000C19D10 /* FlashcardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FE52DFA2A0000C19D10 /* FlashcardView.swift */; };
 		2A343FDC2DFA2A0000C19D10 /* LLMInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FDB2DFA2A0000C19D10 /* LLMInterface.swift */; };
 		2A343FDF2DFA2A0000C19D10 /* ServiceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FE32DFA2A0000C19D10 /* ServiceManager.swift */; };
-		6A8A1C2A10524F02BC13B7C8 /* OllamaLLMInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4D73F68C91414CBA70840C /* OllamaLLMInterface.swift */; };
+		2A343FE42DFA2A0000C19D10 /* FlashcardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FE52DFA2A0000C19D10 /* FlashcardView.swift */; };
 		2A343FE62DFA2A0000C19D10 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A343FE72DFA2A0000C19D10 /* OnboardingView.swift */; };
+		6A8A1C2A10524F02BC13B7C8 /* OllamaLLMInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4D73F68C91414CBA70840C /* OllamaLLMInterface.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,8 +42,8 @@
 		2A343FD72DFA2A0000C19D10 /* DocumentProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentProcessor.swift; sourceTree = "<group>"; };
 		2A343FD92DFA2A0000C19D10 /* FlashcardGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardGenerator.swift; sourceTree = "<group>"; };
 		2A343FDB2DFA2A0000C19D10 /* LLMInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMInterface.swift; sourceTree = "<group>"; };
-		2A343FE52DFA2A0000C19D10 /* FlashcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardView.swift; sourceTree = "<group>"; };
 		2A343FE32DFA2A0000C19D10 /* ServiceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceManager.swift; sourceTree = "<group>"; };
+		2A343FE52DFA2A0000C19D10 /* FlashcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardView.swift; sourceTree = "<group>"; };
 		2A343FE72DFA2A0000C19D10 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		FC4D73F68C91414CBA70840C /* OllamaLLMInterface.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OllamaLLMInterface.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -347,12 +347,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = FocusAI/FocusAI.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"FocusAI/Preview Content\"";
-				DEVELOPMENT_TEAM = Q78UHX93YB;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = Q78UHX93YB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
@@ -364,6 +365,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.CharlieKing.FocusAI;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -375,12 +377,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = FocusAI/FocusAI.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"FocusAI/Preview Content\"";
-				DEVELOPMENT_TEAM = Q78UHX93YB;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = Q78UHX93YB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
@@ -390,8 +393,9 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.CharlieKing.FocusAI;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charlie.FocusAI;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
