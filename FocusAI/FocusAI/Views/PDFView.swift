@@ -426,11 +426,20 @@ public struct PDFView: View {
             // Try to read the file data first
             let data = try Data(contentsOf: url)
             
-            // Create PDF document from data instead of URL
-            guard let document = PDFDocument(data: data) else {
+            // Safety check for file size (max 100MB)
+            guard data.count < 100_000_000 else {
                 errorAlert = ErrorAlert(
-                    title: "Error",
-                    message: "Failed to load PDF. Please make sure it's a valid PDF file."
+                    title: "File Too Large",
+                    message: "PDF file is too large. Please select a file smaller than 100MB."
+                )
+                return
+            }
+            
+            // Create PDF document from data instead of URL
+            guard let document = PDFDocument(data: data), document.pageCount > 0 else {
+                errorAlert = ErrorAlert(
+                    title: "Invalid PDF",
+                    message: "Failed to load PDF. Please make sure it's a valid PDF file with readable content."
                 )
                 return
             }
@@ -438,9 +447,18 @@ public struct PDFView: View {
             // Set the document immediately so the user can work with it
             selectedPDF = document
             
-            // Start processing the PDF automatically
+            // Start processing the PDF automatically with error handling
             Task {
-                await processPDF(document)
+                do {
+                    await processPDF(document)
+                } catch {
+                    await MainActor.run {
+                        errorAlert = ErrorAlert(
+                            title: "Processing Error",
+                            message: "Failed to process PDF: \(error.localizedDescription)"
+                        )
+                    }
+                }
             }
             
             // Save a copy in the background
@@ -618,12 +636,29 @@ public struct PDFView: View {
     
     private func extractTextFromPDF(_ pdf: PDFDocument) -> String {
         var text = ""
-        for pageIndex in 0..<pdf.pageCount {
-            if let page = pdf.page(at: pageIndex) {
-                text += page.string ?? ""
-                text += "\n"
+        let pageCount = pdf.pageCount
+        
+        // Safety check for reasonable page count
+        guard pageCount > 0 && pageCount < 1000 else {
+            print("⚠️ PDF has unusual page count: \(pageCount)")
+            return ""
+        }
+        
+        for pageIndex in 0..<pageCount {
+            autoreleasepool {
+                do {
+                    if let page = pdf.page(at: pageIndex) {
+                        let pageText = page.string ?? ""
+                        text += pageText
+                        text += "\n"
+                    }
+                } catch {
+                    print("⚠️ Error extracting text from page \(pageIndex): \(error)")
+                    // Continue with other pages
+                }
             }
         }
+        
         return text
     }
 }

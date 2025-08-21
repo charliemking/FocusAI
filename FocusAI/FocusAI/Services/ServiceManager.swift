@@ -21,13 +21,38 @@ public class ServiceManager: ObservableObject {
     
     // MARK: - Initialization
     
+    private static func isOllamaAvailable() -> Bool {
+        // Quick synchronous check if Ollama is reachable
+        let url = URL(string: "http://localhost:11434/api/tags")!
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 2.0 // Quick timeout
+        
+        let semaphore = DispatchSemaphore(value: 0)
+        var isAvailable = false
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let httpResponse = response as? HTTPURLResponse,
+               httpResponse.statusCode == 200 {
+                isAvailable = true
+            }
+            semaphore.signal()
+        }.resume()
+        
+        _ = semaphore.wait(timeout: .now() + 2.0)
+        return isAvailable
+    }
+    
     public init(useStubServices: Bool = false, backend: LLMBackend = .ollama) {
         self.backend = backend
         print("🔧 ServiceManager init called with useStubServices: \(useStubServices), backend: \(backend)")
         
-        // Always try Ollama first - the prompt fix resolved the issue
-        let forceStubs = false
-        print("🔧 Using Ollama services with fixed prompt format")
+        // Check if Ollama is available, fallback to stubs if not
+        let forceStubs = !ServiceManager.isOllamaAvailable()
+        if forceStubs {
+            print("🔧 Ollama not available - using stub services for reliability")
+        } else {
+            print("🔧 Ollama available - using Ollama services with fixed prompt format")
+        }
         
         if useStubServices || forceStubs {
             // Use stub implementations for development
