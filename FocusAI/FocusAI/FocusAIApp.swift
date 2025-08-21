@@ -36,7 +36,7 @@ struct FocusAIApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(serviceManager)
-                .frame(minWidth: 1200, minHeight: 800)
+                .frame(minWidth: 1260, minHeight: 840)
                 .task {
                     await serviceManager.initializeServices()
                 }

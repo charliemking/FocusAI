@@ -10,8 +10,12 @@
 	<key>com.apple.security.files.user-selected.read-only</key>
 	<true/>
 	
-	<!-- Network: For web page content downloading -->
+	<!-- Network: For web page content downloading and local LLM access -->
 	<key>com.apple.security.network.client</key>
+	<true/>
+	
+	<!-- Allow connections to localhost for LLM services -->
+	<key>com.apple.security.network.server</key>
 	<true/>
 	
 </dict>

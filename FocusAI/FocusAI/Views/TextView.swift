@@ -179,21 +179,25 @@ public struct TextView: View {
                         .font(Theme.buttonStyle)
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.primaryColor)
-                        .disabled(inputText.isEmpty || isProcessing || isLoadingAnswer)
+                        .disabled(isProcessing || isLoadingAnswer)
                         
-                        if isLoadingAnswer {
-                            answerLoadingView
-                        } else if !answer.isEmpty {
-                            ScrollView {
-                                Text(answer)
-                                    .font(Theme.bodyStyle)
-                                    .foregroundColor(Color(.darkGray))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, 8)
+                        // Fixed height container to prevent resizing during loading
+                        VStack {
+                            if isLoadingAnswer {
+                                answerLoadingView
+                            } else if !answer.isEmpty {
+                                ScrollView {
+                                    Text(answer)
+                                        .font(Theme.bodyStyle)
+                                        .foregroundColor(Color(.darkGray))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.top, 8)
+                                }
+                            } else {
+                                Spacer()
                             }
-                        } else {
-                            Spacer()
                         }
+                        .frame(minHeight: 120) // Minimum height to prevent layout jumps
                     }
                     .padding()
                     .frame(width: (geometry.size.width - 48) * 0.75)
@@ -402,10 +406,6 @@ public struct TextView: View {
             return
         }
         
-        guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "Please enter some text first"
-            return
-        }
         
         // Wait for services to be initialized
         while !serviceManager.isInitialized && serviceManager.lastError == nil {
@@ -421,7 +421,9 @@ public struct TextView: View {
         isLoadingAnswer = true
         
         do {
-            let result = try await serviceManager.askQuestion(question, context: inputText)
+            // Use input text as context if available, otherwise use empty context for general questions
+            let context = inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : inputText
+            let result = try await serviceManager.askQuestion(question, context: context)
             
             // Validate response is not empty
             let cleanedResult = result.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -8,7 +8,7 @@ public enum LLMBackend {
 
 public class ServiceManager: ObservableObject {
     // MARK: - Services
-    public let llmInterface: LLMInterface
+    public var llmInterface: LLMInterface
     public let documentProcessor: DocumentProcessor
     public let flashcardGenerator: FlashcardGenerator
     public let backend: LLMBackend
@@ -25,7 +25,11 @@ public class ServiceManager: ObservableObject {
         self.backend = backend
         print("🔧 ServiceManager init called with useStubServices: \(useStubServices), backend: \(backend)")
         
-        if useStubServices {
+        // Always try Ollama first - the prompt fix resolved the issue
+        let forceStubs = false
+        print("🔧 Using Ollama services with fixed prompt format")
+        
+        if useStubServices || forceStubs {
             // Use stub implementations for development
             print("🔧 Using stub services for development")
             self.llmInterface = StubLLMInterface()
@@ -80,11 +84,30 @@ public class ServiceManager: ObservableObject {
                 print("✅ All services initialized successfully")
             }
         } catch {
-            await MainActor.run {
-                self.lastError = error
-                self.isProcessing = false
-                self.modelStatus = "Failed to load model"
-                print("❌ Service initialization failed: \(error)")
+            print("❌ Ollama service initialization failed: \(error)")
+            print("🔄 Attempting fallback to stub services...")
+            
+            // Try fallback to stub services
+            do {
+                let stubInterface = StubLLMInterface()
+                try await stubInterface.loadModel()
+                
+                // Replace the LLM interface with stub
+                self.llmInterface = stubInterface
+                
+                await MainActor.run {
+                    self.isInitialized = true
+                    self.isProcessing = false
+                    self.modelStatus = "Using stub services (Ollama unavailable)"
+                    print("✅ Fallback to stub services successful")
+                }
+            } catch {
+                await MainActor.run {
+                    self.lastError = error
+                    self.isProcessing = false
+                    self.modelStatus = "Failed to load any model"
+                    print("❌ Both Ollama and stub service initialization failed: \(error)")
+                }
             }
         }
     }

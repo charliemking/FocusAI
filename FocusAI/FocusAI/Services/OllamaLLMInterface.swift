@@ -59,9 +59,14 @@ public class OllamaLLMInterface: LLMInterface {
         let startTime = Date()
         
         do {
+            logger.info("🔍 Sending prompt to Ollama: \(String(prompt.prefix(300)))...")
             let response = try await generateText(prompt: prompt, maxTokens: 500)
             let duration = Date().timeIntervalSince(startTime)
+            logger.info("🔍 Raw Ollama response length: \(response.count) characters")
+            logger.info("🔍 Raw Ollama response: \(String(response.prefix(300)))...")
             let cleanedResponse = cleanGeneratedText(response)
+            logger.info("🔍 Cleaned response length: \(cleanedResponse.count) characters")
+            logger.info("🔍 Cleaned response: \(String(cleanedResponse.prefix(300)))...")
             
             recordPerformanceMetric("Question Answering", duration: duration, tokenCount: cleanedResponse.split(separator: " ").count)
             logger.info("✅ Question answered successfully in \(String(format: "%.2f", duration))s")
@@ -262,15 +267,26 @@ public class OllamaLLMInterface: LLMInterface {
     // MARK: - Prompt Building
     
     private func buildQuestionAnswerPrompt(question: String, context: String) -> String {
-        let truncatedContext = String(context.prefix(6000))
+        let trimmedContext = context.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        return """
-        <|system|>You are a helpful AI assistant that answers questions based on provided context. Be concise but comprehensive.<|end|>
-        <|user|>Context: \(truncatedContext)
+        if trimmedContext.isEmpty {
+            // For general questions without context - use simple format that works with phi3:mini
+            return """
+            Question: \(question)
 
-        Question: \(question)<|end|>
-        <|assistant|>
-        """
+            Answer:
+            """
+        } else {
+            // For questions with context - use simple format
+            let truncatedContext = String(trimmedContext.prefix(6000))
+            return """
+            Context: \(truncatedContext)
+
+            Question: \(question)
+
+            Answer:
+            """
+        }
     }
     
     private func buildSummaryPrompt(text: String) -> String {

@@ -206,21 +206,25 @@ public struct PDFView: View {
                         .font(Theme.buttonStyle)
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.primaryColor)
-                        .disabled(selectedPDF == nil || isProcessing || isLoadingAnswer)
+                        .disabled(isProcessing || isLoadingAnswer)
                         
-                        if isLoadingAnswer {
-                            answerLoadingView
-                        } else if !answer.isEmpty {
-                            ScrollView {
-                                Text(answer)
-                                    .font(Theme.bodyStyle)
-                                    .foregroundColor(Color(.darkGray))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, 8)
+                        // Fixed height container to prevent resizing during loading
+                        VStack {
+                            if isLoadingAnswer {
+                                answerLoadingView
+                            } else if !answer.isEmpty {
+                                ScrollView {
+                                    Text(answer)
+                                        .font(Theme.bodyStyle)
+                                        .foregroundColor(Color(.darkGray))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.top, 8)
+                                }
+                            } else {
+                                Spacer()
                             }
-                        } else {
-                            Spacer()
                         }
+                        .frame(minHeight: 120) // Minimum height to prevent layout jumps
                     }
                     .padding()
                     .frame(width: (geometry.size.width - 48) * 0.75)
@@ -570,13 +574,6 @@ public struct PDFView: View {
             return
         }
         
-        guard let pdf = selectedPDF else {
-            errorAlert = ErrorAlert(
-                title: "No PDF",
-                message: "Please load a PDF first"
-            )
-            return
-        }
         
         // Wait for services to be initialized
         while !serviceManager.isInitialized && serviceManager.lastError == nil {
@@ -595,9 +592,9 @@ public struct PDFView: View {
         isLoadingAnswer = true
         
         do {
-            // Use cached PDF text if available, otherwise extract
-            let pdfText = currentPDFText.isEmpty ? extractTextFromPDF(pdf) : currentPDFText
-            let result = try await serviceManager.askQuestion(question, context: pdfText)
+            // Use cached PDF text if available, otherwise use empty context for general questions
+            let context = currentPDFText.isEmpty ? "" : currentPDFText
+            let result = try await serviceManager.askQuestion(question, context: context)
             
             // Validate response is not empty
             let cleanedResult = result.trimmingCharacters(in: .whitespacesAndNewlines)
