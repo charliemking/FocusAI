@@ -366,7 +366,7 @@ public struct URLView: View {
             currentDocumentText = try await serviceManager.documentProcessor.extractText(from: url)
             
             // Start both summary and flashcards in parallel
-            async let summaryTask = serviceManager.llmInterface.generateSummary(text: currentDocumentText)
+            async let summaryTask = serviceManager.generateSummary(text: currentDocumentText)
             
             // Start flashcard generation in background with proper task management
             flashcardTask = Task {
@@ -441,7 +441,7 @@ public struct URLView: View {
             // Check if task was cancelled before making the expensive LLM call
             try Task.checkCancellation()
             
-            let generatedFlashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: currentDocumentText, count: 15, difficulty: .intermediate)
+            let generatedFlashcards = try await serviceManager.generateFlashcards(from: currentDocumentText, count: 15, difficulty: .intermediate)
             
             // Check again after the call in case it was cancelled during generation
             try Task.checkCancellation()

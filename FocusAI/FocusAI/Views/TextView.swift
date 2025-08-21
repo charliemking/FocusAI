@@ -340,7 +340,7 @@ public struct TextView: View {
         }
         
         // Start both summary and flashcards in parallel
-        async let summaryTask = serviceManager.llmInterface.generateSummary(text: inputText)
+        async let summaryTask = serviceManager.generateSummary(text: inputText)
         
         // Start flashcard generation in background with proper task management
         flashcardTask = Task {
@@ -377,7 +377,7 @@ public struct TextView: View {
             // Check if task was cancelled before making the expensive LLM call
             try Task.checkCancellation()
             
-            let generatedFlashcards = try await serviceManager.flashcardGenerator.generateFlashcards(from: inputText, count: 15, difficulty: .intermediate)
+            let generatedFlashcards = try await serviceManager.generateFlashcards(from: inputText, count: 15, difficulty: .intermediate)
             
             // Check again after the call in case it was cancelled during generation
             try Task.checkCancellation()
