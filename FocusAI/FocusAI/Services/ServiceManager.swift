@@ -9,8 +9,8 @@ public enum LLMBackend {
 public class ServiceManager: ObservableObject {
     // MARK: - Services
     public var llmInterface: LLMInterface
-    public let documentProcessor: DocumentProcessor
-    public let flashcardGenerator: FlashcardGenerator
+    public var documentProcessor: DocumentProcessor
+    public var flashcardGenerator: FlashcardGenerator
     public let backend: LLMBackend
     
     // MARK: - State
@@ -46,15 +46,7 @@ public class ServiceManager: ObservableObject {
         self.backend = backend
         print("🔧 ServiceManager init called with useStubServices: \(useStubServices), backend: \(backend)")
         
-        // Check if Ollama is available, fallback to stubs if not
-        let forceStubs = !ServiceManager.isOllamaAvailable()
-        if forceStubs {
-            print("🔧 Ollama not available - using stub services for reliability")
-        } else {
-            print("🔧 Ollama available - using Ollama services with fixed prompt format")
-        }
-        
-        if useStubServices || forceStubs {
+        if useStubServices {
             // Use stub implementations for development
             print("🔧 Using stub services for development")
             self.llmInterface = StubLLMInterface()
@@ -62,23 +54,12 @@ public class ServiceManager: ObservableObject {
             self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
             self.modelStatus = "Stub mode"
         } else {
-            switch backend {
-            case .ollama:
-                // Use Ollama implementation (fast and reliable)
-                print("🔧 Attempting to use Ollama services")
-                self.llmInterface = OllamaLLMInterface()
-                self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
-                self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
-                self.modelStatus = "Connecting to Ollama..."
-                
-            case .stub:
-                // This case shouldn't happen since useStubServices would be true
-                print("🔧 Using stub services (fallback)")
-                self.llmInterface = StubLLMInterface()
-                self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
-                self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
-                self.modelStatus = "Stub mode"
-            }
+            // Start with stubs and upgrade to Ollama when available
+            print("🔧 Starting with stub services, will upgrade to Ollama when available")
+            self.llmInterface = StubLLMInterface()
+            self.documentProcessor = DefaultDocumentProcessor(llmInterface: self.llmInterface)
+            self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: self.llmInterface)
+            self.modelStatus = "Initializing..."
         }
         
         print("🔧 ServiceManager initialization complete")
@@ -94,47 +75,76 @@ public class ServiceManager: ObservableObject {
         
         print("🔄 Initializing services...")
         
+        await MainActor.run {
+            self.isProcessing = true
+            self.modelStatus = "Checking for Ollama..."
+        }
+        
+        // Always check if we can upgrade to Ollama first
+        await checkAndUpgradeToOllama()
+        
         do {
-            await MainActor.run {
-                self.isProcessing = true
-                self.modelStatus = "Loading model..."
-            }
-            
             try await llmInterface.loadModel()
             
             await MainActor.run {
                 self.isInitialized = true
                 self.isProcessing = false
-                self.modelStatus = "Model loaded successfully"
+                if self.llmInterface is OllamaLLMInterface {
+                    self.modelStatus = "Ready (Ollama)"
+                } else {
+                    self.modelStatus = "Ready (Demo mode)"
+                }
                 print("✅ All services initialized successfully")
             }
         } catch {
-            print("❌ Ollama service initialization failed: \(error)")
-            print("🔄 Attempting fallback to stub services...")
+            print("❌ Service initialization failed: \(error)")
+            await MainActor.run {
+                self.lastError = error
+                self.isProcessing = false
+                self.modelStatus = "Failed to initialize"
+            }
+        }
+    }
+    
+    public func checkAndUpgradeToOllama() async {
+        // Check if we can upgrade from stubs to Ollama
+        if ServiceManager.isOllamaAvailable() && !(llmInterface is OllamaLLMInterface) {
+            print("🔧 Ollama is now available - upgrading from stub services")
             
-            // Try fallback to stub services
+            await MainActor.run {
+                self.modelStatus = "Upgrading to Ollama..."
+            }
+            
+            // Upgrade to Ollama services
+            let ollamaInterface = OllamaLLMInterface()
+            
             do {
-                let stubInterface = StubLLMInterface()
-                try await stubInterface.loadModel()
+                // Try to load the Ollama model
+                try await ollamaInterface.loadModel()
                 
-                // Replace the LLM interface with stub
-                self.llmInterface = stubInterface
+                // Success! Upgrade the services
+                self.llmInterface = ollamaInterface
+                self.documentProcessor = DefaultDocumentProcessor(llmInterface: ollamaInterface)
+                self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: ollamaInterface)
                 
                 await MainActor.run {
-                    self.isInitialized = true
-                    self.isProcessing = false
-                    self.modelStatus = "Using stub services (Ollama unavailable)"
-                    print("✅ Fallback to stub services successful")
+                    self.modelStatus = "Ready (Ollama)"
                 }
+                
+                print("✅ Successfully upgraded to Ollama services")
             } catch {
+                print("⚠️ Ollama is available but model failed to load: \(error)")
                 await MainActor.run {
-                    self.lastError = error
-                    self.isProcessing = false
-                    self.modelStatus = "Failed to load any model"
-                    print("❌ Both Ollama and stub service initialization failed: \(error)")
+                    self.modelStatus = "Ready (Demo mode)"
                 }
             }
         }
+    }
+    
+    // Method to manually refresh and check for Ollama (can be called after onboarding)
+    public func refreshServices() async {
+        print("🔄 Manually refreshing services...")
+        await checkAndUpgradeToOllama()
     }
     
     // MARK: - Processing Methods
