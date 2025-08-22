@@ -12,3 +12,10 @@ privacy, and a distraction-free experience. This is an ongoing personal project 
 - **Question Answering**: Ask questions about your documents
 - **Complete Privacy**: Everything runs locally on your Mac
 - **Optimized Performance**: Smart chunking and parallel processing for speed
+
+## Demo
+
+<div align="center">
+  <img src="FocusAI Demo Image.png" alt="FocusAI Demo - Processing a Wired article about AI privacy" width="800">
+  <p><em>FocusAI in action: Processing a Wired article about AI privacy, showcasing document analysis, AI summarization, flashcard generation, and contextual Q&A features.</em></p>
+</div>
