@@ -11,6 +11,7 @@ privacy, and a distraction-free experience. This is an ongoing personal project 
 - **Flashcard Generation**: Automatically create study flashcards
 - **Question Answering**: Ask questions about your documents
 - **Complete Privacy**: Everything runs locally on your Mac
+- **Offline Capability**: App is fully functional offline
 - **Optimized Performance**: Smart chunking and parallel processing for speed
 
 ## Demo
