@@ -17,14 +17,14 @@ public struct FlashcardView: View {
             if flashcards.isEmpty {
                 Text("No flashcards available")
                     .font(Theme.bodyStyle)
-                    .foregroundColor(Color(.darkGray))
+                    .foregroundColor(Theme.adaptiveTextColor)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 // Current card indicator
                 HStack {
                     Text("Card \(currentIndex + 1) of \(flashcards.count)")
                         .font(Theme.bodyStyle)
-                        .foregroundColor(Color(.darkGray))
+                        .foregroundColor(Theme.adaptiveTextColor)
                     
                     Spacer()
                 }
@@ -70,7 +70,7 @@ public struct FlashcardView: View {
                     
                     Text("Tap to flip")
                         .font(.caption)
-                        .foregroundColor(Color(.darkGray))
+                        .foregroundColor(Theme.adaptiveTextColor)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
@@ -83,7 +83,7 @@ public struct FlashcardView: View {
                                 ScrollView {
                                     Text(flashcard.answer)
                                         .font(.system(size: 15))
-                                        .foregroundColor(Color(.darkGray))
+                                        .foregroundColor(Theme.adaptiveTextColor)
                                         .multilineTextAlignment(.center)
                                         .lineLimit(nil)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -230,7 +230,7 @@ public struct FlashcardView: View {
                     Text("Shuffle")
                 }
                 .font(Theme.subtitleStyle)
-                .foregroundColor(.white)
+                .foregroundColor(Color(NSColor.controlBackgroundColor))
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
                 .background(Theme.primaryColor)
@@ -264,7 +264,7 @@ public struct FlashcardView: View {
                     Text("Shuffle")
                 }
                 .font(.caption)
-                .foregroundColor(.white)
+                .foregroundColor(Color(NSColor.controlBackgroundColor))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(Theme.primaryColor)

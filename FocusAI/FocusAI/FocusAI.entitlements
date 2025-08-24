@@ -14,9 +14,6 @@
 	<key>com.apple.security.network.client</key>
 	<true/>
 	
-	<!-- Allow connections to localhost for LLM services -->
-	<key>com.apple.security.network.server</key>
-	<true/>
 	
 </dict>
 </plist>

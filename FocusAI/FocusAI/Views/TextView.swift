@@ -37,13 +37,13 @@ public struct TextView: View {
                         } else if summary.isEmpty {
                             Text("Summary will appear here")
                                 .font(Theme.bodyStyle)
-                                .foregroundColor(Color(.darkGray))
+                                .foregroundColor(Theme.adaptiveTextColor)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         } else {
                             ScrollView {
                                 Text(summary)
                                     .font(Theme.bodyStyle)
-                                    .foregroundColor(Color(.darkGray))
+                                    .foregroundColor(Theme.adaptiveTextColor)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -70,7 +70,7 @@ public struct TextView: View {
                             if !flashcards.isEmpty {
                                 Text("\(flashcards.count) cards")
                                     .font(.caption)
-                                    .foregroundColor(Color(.darkGray))
+                                    .foregroundColor(Theme.adaptiveTextColor)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .background(Color.gray.opacity(0.1))
@@ -84,7 +84,7 @@ public struct TextView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Interactive flashcards will appear here")
                                     .font(Theme.bodyStyle)
-                                    .foregroundColor(Color(.darkGray))
+                                    .foregroundColor(Theme.adaptiveTextColor)
                                 
                                 if !summary.isEmpty {
                                     Button("Generate Flashcards") {
@@ -93,7 +93,7 @@ public struct TextView: View {
                                         }
                                     }
                                     .font(Theme.subtitleStyle)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(Color(NSColor.controlBackgroundColor))
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
                                     .background(Theme.primaryColor)
@@ -125,9 +125,9 @@ public struct TextView: View {
                         TextEditor(text: $inputText)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .scrollContentBackground(.hidden)
-                            .background(Color.white)
-                            .foregroundColor(Color(.darkGray))
-                            .accentColor(Color(.darkGray))
+                            .background(Theme.backgroundWhite)
+                            .foregroundColor(Theme.adaptiveTextColor)
+                            .accentColor(Theme.adaptiveTextColor)
                             .font(Theme.bodyStyle)
                             .cornerRadius(6)
                             .overlay(
@@ -161,9 +161,9 @@ public struct TextView: View {
                         TextField("Type your question...", text: $question)
                             .textFieldStyle(.plain)
                             .font(Theme.bodyStyle)
-                            .foregroundColor(Color(.darkGray))
+                            .foregroundColor(Theme.adaptiveTextColor)
                             .padding(8)
-                            .background(Color.white)
+                            .background(Theme.backgroundWhite)
                             .cornerRadius(6)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6)
@@ -189,7 +189,7 @@ public struct TextView: View {
                                 ScrollView {
                                     Text(answer)
                                         .font(Theme.bodyStyle)
-                                        .foregroundColor(Color(.darkGray))
+                                        .foregroundColor(Theme.adaptiveTextColor)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.top, 8)
                                 }
@@ -208,7 +208,6 @@ public struct TextView: View {
                 .frame(height: (geometry.size.height - 48) / 2)
             }
             .padding(.vertical, 16)
-            .background(Color(white: 0.95))
         }
     }
     
@@ -217,7 +216,7 @@ public struct TextView: View {
             // Custom spinning indicator (33% bigger)
             Circle()
                 .trim(from: 0, to: 0.8)
-                .stroke(Color(.darkGray), lineWidth: 5) // 4 * 1.33 ≈ 5
+                .stroke(Theme.adaptiveTextColor, lineWidth: 5) // 4 * 1.33 ≈ 5
                 .frame(width: 53, height: 53) // 40 * 1.33 ≈ 53
                 .rotationEffect(.degrees(summaryRotationAngle))
                 .onAppear {
@@ -227,15 +226,15 @@ public struct TextView: View {
             VStack(spacing: 5) { // 4 * 1.33 ≈ 5
                 Text("Processing...")
                     .font(Theme.processingTitleStyle)
-                    .foregroundColor(Color(.darkGray))
+                    .foregroundColor(Theme.adaptiveTextColor)
                 
                 Text("Creating comprehensive summary")
                     .font(Theme.processingSubtitleStyle)
-                    .foregroundColor(Color(.darkGray))
+                    .foregroundColor(Theme.adaptiveTextColor)
             }
         }
         .padding(27) // 20 * 1.33 ≈ 27
-        .background(Color.white)
+        .background(Theme.backgroundWhite)
         .cornerRadius(16) // 12 * 1.33 ≈ 16
         .shadow(color: Color.black.opacity(0.2), radius: 11, x: 0, y: 5) // 8 * 1.33 ≈ 11, 4 * 1.33 ≈ 5
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -260,7 +259,7 @@ public struct TextView: View {
             // Custom spinning indicator matching the processing view style exactly
             Circle()
                 .trim(from: 0, to: 0.8)
-                .stroke(Color(.darkGray), lineWidth: 5)
+                .stroke(Theme.adaptiveTextColor, lineWidth: 5)
                 .frame(width: 53, height: 53)
                 .rotationEffect(.degrees(flashcardRotationAngle))
                 .onAppear {
@@ -270,15 +269,15 @@ public struct TextView: View {
             VStack(spacing: 5) {
                 Text("Generating flashcards...")
                     .font(Theme.processingTitleStyle)
-                    .foregroundColor(Color(.darkGray))
+                    .foregroundColor(Theme.adaptiveTextColor)
                 
                 Text("This may take 30 seconds")
                     .font(Theme.processingSubtitleStyle)
-                    .foregroundColor(Color(.darkGray))
+                    .foregroundColor(Theme.adaptiveTextColor)
             }
         }
         .padding(27)
-        .background(Color.white)
+        .background(Theme.backgroundWhite)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.2), radius: 11, x: 0, y: 5)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -289,7 +288,7 @@ public struct TextView: View {
             // Custom spinning indicator matching the other loading views
             Circle()
                 .trim(from: 0, to: 0.8)
-                .stroke(Color(.darkGray), lineWidth: 5)
+                .stroke(Theme.adaptiveTextColor, lineWidth: 5)
                 .frame(width: 53, height: 53)
                 .rotationEffect(.degrees(summaryRotationAngle))
                 .onAppear {
@@ -299,15 +298,15 @@ public struct TextView: View {
             VStack(spacing: 5) {
                 Text("Analyzing question...")
                     .font(Theme.processingTitleStyle)
-                    .foregroundColor(Color(.darkGray))
+                    .foregroundColor(Theme.adaptiveTextColor)
                 
                 Text("Answer will be ready in a moment")
                     .font(Theme.processingSubtitleStyle)
-                    .foregroundColor(Color(.darkGray))
+                    .foregroundColor(Theme.adaptiveTextColor)
             }
         }
         .padding(27)
-        .background(Color.white)
+        .background(Theme.backgroundWhite)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.2), radius: 11, x: 0, y: 5)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)

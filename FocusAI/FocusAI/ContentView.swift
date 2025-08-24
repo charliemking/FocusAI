@@ -31,13 +31,13 @@ struct ContentView: View {
                 
                 Text("A Privacy-First Study Assistant by Charlie King")
                     .font(Theme.titleRegularStyle)
-                    .foregroundColor(Color(.darkGray))
+                    .foregroundColor(Theme.adaptiveTextColor)
             }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 20)
             .padding(.top, 8)
             .padding(.bottom, 12)
-            .background(Color.white)
+            .background(Theme.backgroundWhite)
             
             // Tab Bar
             HStack(spacing: 24) {
@@ -50,14 +50,13 @@ struct ContentView: View {
                                 index == 1 ? "Text" : "URL")
                                 .font(Theme.buttonStyle)
                         }
-                        .foregroundColor(selectedTab == index ? Theme.primaryColor : Color(.darkGray))
+                        .foregroundColor(selectedTab == index ? Theme.primaryColor : Theme.adaptiveTextColor)
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.top, 16)
             .frame(maxWidth: .infinity)
-            .background(Theme.backgroundColor)
             
             // Content
             Group {
@@ -70,6 +69,7 @@ struct ContentView: View {
                 }
             }
         }
+        .background(Theme.backgroundColor)
         .frame(minWidth: 1260, minHeight: 840)
     }
 }
