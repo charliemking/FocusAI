@@ -11,7 +11,7 @@ import AppKit
 @main
 struct FocusAIApp: App {
     @StateObject private var serviceManager = ServiceManager(useStubServices: false, backend: .ollama)
-    @State private var showOnboarding = false
+    @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     
     init() {
         // Customize window appearance
@@ -26,10 +26,6 @@ struct FocusAIApp: App {
             window.setContentSize(NSSize(width: 1200, height: 800))
         }
         
-        // Check if this is the first launch
-        if !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
-            showOnboarding = true
-        }
     }
     
     var body: some Scene {
