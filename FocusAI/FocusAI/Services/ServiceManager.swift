@@ -122,6 +122,9 @@ public class ServiceManager: ObservableObject {
     }
     
     public func checkAndUpgradeToOllama() async {
+        print("🔍 Checking upgrade to Ollama - current interface: \(type(of: llmInterface))")
+        print("🔍 Is Ollama available: \(ServiceManager.isOllamaAvailable())")
+        
         // Check if we can upgrade from stubs to Ollama
         if ServiceManager.isOllamaAvailable() && !(llmInterface is OllamaLLMInterface) {
             print("🔧 Ollama is now available - upgrading from stub services")
@@ -134,10 +137,13 @@ public class ServiceManager: ObservableObject {
             let ollamaInterface = OllamaLLMInterface()
             
             do {
+                print("🔄 Attempting to load Ollama model...")
                 // Try to load the Ollama model
                 try await ollamaInterface.loadModel()
+                print("✅ Ollama model loaded successfully!")
                 
                 // Success! Upgrade the services
+                print("🔄 Upgrading all services to use Ollama...")
                 self.llmInterface = ollamaInterface
                 self.documentProcessor = DefaultDocumentProcessor(llmInterface: ollamaInterface)
                 self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: ollamaInterface)
@@ -147,11 +153,18 @@ public class ServiceManager: ObservableObject {
                 }
                 
                 print("✅ Successfully upgraded to Ollama services")
+                print("🔍 New LLM interface type: \(type(of: self.llmInterface))")
             } catch {
                 print("⚠️ Ollama is available but model failed to load: \(error)")
                 await MainActor.run {
                     self.modelStatus = "Ready (Demo mode)"
                 }
+            }
+        } else {
+            if llmInterface is OllamaLLMInterface {
+                print("✅ Already using Ollama interface")
+            } else if !ServiceManager.isOllamaAvailable() {
+                print("❌ Ollama is not available for upgrade")
             }
         }
     }
@@ -309,6 +322,8 @@ public class ServiceManager: ObservableObject {
     
     public func generateFlashcards(from text: String, count: Int = 6, difficulty: FlashcardDifficulty = .intermediate) async throws -> [Flashcard] {
         print("🃏 Generating \(count) flashcards at \(difficulty.rawValue) level...")
+        print("🔍 Current LLM interface type: \(type(of: llmInterface))")
+        print("🔍 Current model status: \(modelStatus)")
         
         await MainActor.run {
             self.isProcessing = true
@@ -324,35 +339,28 @@ public class ServiceManager: ObservableObject {
         if !(llmInterface is OllamaLLMInterface) && ServiceManager.isOllamaAvailable() {
             print("🔄 Ollama became available - upgrading from stub services for this request")
             await checkAndUpgradeToOllama()
+            print("🔍 After upgrade, LLM interface type: \(type(of: llmInterface))")
         }
         
         do {
             let flashcards = try await flashcardGenerator.generateFlashcards(from: text, count: count, difficulty: difficulty)
-            print("✅ Generated \(flashcards.count) flashcards successfully")
+            print("✅ Generated \(flashcards.count) flashcards successfully using \(type(of: llmInterface))")
             return flashcards
         } catch {
-            print("❌ Flashcard generation failed: \(error)")
+            print("❌ Flashcard generation failed with \(type(of: llmInterface)): \(error)")
             
-            // If using Ollama and it fails, try falling back to stubs
+            // Try with stub interface as fallback BUT don't switch permanently
             if llmInterface is OllamaLLMInterface {
-                print("🔄 Ollama failed, attempting fallback to stub services...")
+                print("🔄 Ollama failed, trying one-time stub fallback for flashcards...")
                 
                 do {
                     let stubInterface = StubLLMInterface()
                     try await stubInterface.loadModel()
                     
-                    // Switch to stub services
-                    self.llmInterface = stubInterface
-                    self.documentProcessor = DefaultDocumentProcessor(llmInterface: stubInterface)
-                    self.flashcardGenerator = DefaultFlashcardGenerator(llmInterface: stubInterface)
-                    
-                    await MainActor.run {
-                        self.modelStatus = "Ready (Demo mode - Ollama unavailable)"
-                    }
-                    
-                    // Try flashcard generation again with stubs
-                    let flashcards = try await self.flashcardGenerator.generateFlashcards(from: text, count: count, difficulty: difficulty)
-                    print("✅ Successfully generated flashcards with stub fallback")
+                    // Use stub ONLY for this one flashcard request
+                    let tempGenerator = DefaultFlashcardGenerator(llmInterface: stubInterface)
+                    let flashcards = try await tempGenerator.generateFlashcards(from: text, count: count, difficulty: difficulty)
+                    print("✅ Stub fallback succeeded for flashcards")
                     return flashcards
                 } catch {
                     print("❌ Stub fallback also failed: \(error)")

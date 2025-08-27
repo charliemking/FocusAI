@@ -40,6 +40,10 @@ struct FocusAIApp: App {
                     OnboardingView(isPresented: $showOnboarding)
                         .onDisappear {
                             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+                            // Refresh services after onboarding to pick up Ollama
+                            Task {
+                                await serviceManager.refreshServices()
+                            }
                         }
                 }
         }

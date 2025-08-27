@@ -40,11 +40,24 @@ public struct OnboardingView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Header - removed skip button as onboarding is required
+                // Header with close button
                 HStack {
                     Spacer()
+                    Button(action: {
+                        isPresented = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            NSApplication.shared.terminate(nil)
+                        }
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .help("Close FocusAI")
                 }
                 .frame(height: 44)
+                .padding(.horizontal, 20)
                 
                 // Content
                 ScrollView {
@@ -117,6 +130,7 @@ public struct OnboardingView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(12)
                             }
+                            .buttonStyle(PlainButtonStyle())
                             .disabled(isCheckingOllama || (steps[currentStep].isVerificationStep && checkAttempted && !ollamaInstalled))
                             
                             if currentStep > 0 {
@@ -125,6 +139,7 @@ public struct OnboardingView: View {
                                         currentStep -= 1
                                     }
                                 }
+                                .buttonStyle(PlainButtonStyle())
                                 .foregroundColor(Color(.darkGray))
                             }
                         }
@@ -150,20 +165,22 @@ public struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     InstallationStep(
                         number: "1",
-                        title: "Open Terminal",
-                        description: "Press Cmd+Space, type 'Terminal', press Enter"
+                        title: "Download Ollama",
+                        description: "Click the button below to visit ollama.com and download the app"
                     )
                     
                     InstallationStep(
                         number: "2", 
-                        title: "Install Ollama",
-                        description: "Copy and paste then press enter: curl -fsSL https://ollama.com/install.sh | sh"
+                        title: "Open Ollama App",
+                        description: "Open Terminal (Cmd+Space, type 'Terminal') and run:",
+                        copyableCommand: "open -a \"Ollama\""
                     )
                     
                     InstallationStep(
                         number: "3",
-                        title: "Download Model",
-                        description: "Copy and paste then press enter: ollama pull phi3:mini"
+                        title: "Download AI Model",
+                        description: "In Terminal, copy and paste:",
+                        copyableCommand: "ollama pull phi3:mini"
                     )
                 }
             }
@@ -186,6 +203,7 @@ public struct OnboardingView: View {
                 .foregroundColor(.white)
                 .cornerRadius(8)
             }
+            .buttonStyle(PlainButtonStyle())
             
             VStack(spacing: 8) {
                 Text("🔒 Privacy First: Terminal installation ensures your app runs completely offline")
@@ -266,6 +284,7 @@ public struct OnboardingView: View {
                     Button("Try Again") {
                         checkOllamaInstallation()
                     }
+                    .buttonStyle(PlainButtonStyle())
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
                     .background(Theme.primaryColor)
@@ -366,6 +385,14 @@ private struct InstallationStep: View {
     let number: String
     let title: String
     let description: String
+    let copyableCommand: String?
+    
+    init(number: String, title: String, description: String, copyableCommand: String? = nil) {
+        self.number = number
+        self.title = title
+        self.description = description
+        self.copyableCommand = copyableCommand
+    }
     
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -377,7 +404,7 @@ private struct InstallationStep: View {
                 .background(Theme.primaryColor)
                 .clipShape(Circle())
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.medium)
@@ -385,6 +412,30 @@ private struct InstallationStep: View {
                 Text(description)
                     .font(.caption)
                     .foregroundColor(Color(.darkGray))
+                
+                if let command = copyableCommand {
+                    HStack {
+                        Text(command)
+                            .font(.system(.caption, design: .monospaced))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color(.controlBackgroundColor))
+                            .cornerRadius(4)
+                            .foregroundColor(Theme.primaryColor)
+                        
+                        Button(action: {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(command, forType: .string)
+                        }) {
+                            Image(systemName: "doc.on.doc")
+                                .font(.caption)
+                                .foregroundColor(Theme.primaryColor)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .background(Color.clear)
+                        .help("Copy to clipboard")
+                    }
+                }
             }
             
             Spacer()
