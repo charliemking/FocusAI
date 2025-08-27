@@ -2,10 +2,12 @@ import SwiftUI
 
 public struct OnboardingView: View {
     @Binding var isPresented: Bool
+    private let onCompletion: (Bool) -> Void
     @State private var currentStep = 0
     @State private var isCheckingOllama = false
     @State private var ollamaInstalled = false
     @State private var checkAttempted = false
+    @State private var ollamaCheckTimer: Timer?
     
     private let steps = [
         OnboardingStep(
@@ -30,8 +32,9 @@ public struct OnboardingView: View {
         )
     ]
     
-    public init(isPresented: Binding<Bool>) {
+    public init(isPresented: Binding<Bool>, onCompletion: @escaping (Bool) -> Void = { _ in }) {
         self._isPresented = isPresented
+        self.onCompletion = onCompletion
     }
     
     public var body: some View {
@@ -44,6 +47,8 @@ public struct OnboardingView: View {
                 HStack {
                     Spacer()
                     Button(action: {
+                        stopOllamaMonitoring()
+                        onCompletion(false)
                         isPresented = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             NSApplication.shared.terminate(nil)
@@ -97,6 +102,10 @@ public struct OnboardingView: View {
                             // Verification step specific content
                             if steps[currentStep].isVerificationStep {
                                 verificationContent
+                                    .onAppear {
+                                        // Start monitoring as soon as we reach the verification step
+                                        startOllamaMonitoring()
+                                    }
                             }
                         }
                         .padding(.horizontal, 40)
@@ -152,6 +161,9 @@ public struct OnboardingView: View {
             .cornerRadius(16)
             .shadow(radius: 20)
             .padding(40)
+            .onDisappear {
+                stopOllamaMonitoring()
+            }
         }
     }
     
@@ -314,7 +326,6 @@ public struct OnboardingView: View {
         checkAttempted = true
         
         Task {
-            // App Store compliant check - test if Ollama server is accessible
             let isInstalled = await testOllamaConnection()
             
             await MainActor.run {
@@ -322,9 +333,7 @@ public struct OnboardingView: View {
                 isCheckingOllama = false
                 
                 if isInstalled {
-                    // Update button text to "Start Using FocusAI"
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        // Auto-advance after showing success
                         nextStep()
                     }
                 }
@@ -333,13 +342,12 @@ public struct OnboardingView: View {
     }
     
     private func testOllamaConnection() async -> Bool {
-        // Test if Ollama is accessible via HTTP request (App Store compliant)
         guard let url = URL(string: "http://localhost:11434/api/tags") else {
             return false
         }
         
         var request = URLRequest(url: url)
-        request.timeoutInterval = 5.0
+        request.timeoutInterval = 1.0  // Very short timeout
         
         do {
             let (_, response) = try await URLSession.shared.data(for: request)
@@ -352,12 +360,47 @@ public struct OnboardingView: View {
         }
     }
     
+    private func startOllamaMonitoring() {
+        ollamaCheckTimer?.invalidate()
+        
+        // Immediately check current state
+        Task {
+            let isRunning = await testOllamaConnection()
+            await MainActor.run {
+                ollamaInstalled = isRunning
+                checkAttempted = true
+            }
+        }
+        
+        // Check every 2 seconds
+        ollamaCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
+            Task {
+                let isRunning = await testOllamaConnection()
+                await MainActor.run {
+                    if ollamaInstalled != isRunning {
+                        ollamaInstalled = isRunning
+                        checkAttempted = true
+                    }
+                }
+            }
+        }
+    }
+    
+    private func stopOllamaMonitoring() {
+        ollamaCheckTimer?.invalidate()
+        ollamaCheckTimer = nil
+    }
+    
     private func nextStep() {
         if currentStep < steps.count - 1 {
             withAnimation {
                 currentStep += 1
             }
         } else {
+            // Only mark as completed if we're on the final step and Ollama is installed
+            let isCompleted = ollamaInstalled
+            stopOllamaMonitoring()
+            onCompletion(isCompleted)
             isPresented = false
         }
     }
@@ -444,5 +487,7 @@ private struct InstallationStep: View {
 }
 
 #Preview {
-    OnboardingView(isPresented: .constant(true))
+    OnboardingView(isPresented: .constant(true)) { completed in
+        print("Onboarding completed: \(completed)")
+    }
 }
