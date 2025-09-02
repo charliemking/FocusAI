@@ -1,7 +1,7 @@
 # FocusAI  
 [![App Store](https://img.shields.io/badge/App%20Store-Download-blue?logo=apple)](https://apps.apple.com/us/app/focusai-private-studying/id6751072719?mt=12)
 
-FocusAI is a privacy-first macOS study assistant written in Swift. It summarizes PDFs, generates flashcards, and answers questions using on-device models so your data is not tracked. Designed for students like me, it offers offline functionality, user privacy, and a distraction-free experience. This is an ongoing personal project inspired by my interest in usable, ethical AI.
+FocusAI is a privacy-first study assistant for macOS, written in Swift. It summarizes PDFs, generates flashcards, and answers questions using on-device models, keeping your data private. Designed for students, it offers offline functionality, strong privacy, and a distraction-free experience. This ongoing project reflects my interest in building usable, ethical AI.
 
 ## Features
 
